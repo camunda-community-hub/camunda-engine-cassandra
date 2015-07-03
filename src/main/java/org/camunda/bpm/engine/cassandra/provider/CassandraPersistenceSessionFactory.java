@@ -1,15 +1,14 @@
-package org.camunda.bpm.engine.cassandra.cfg;
+package org.camunda.bpm.engine.cassandra.provider;
 
-import org.camunda.bpm.engine.cassandra.datamodel.CassandraPersistenceSession;
 import org.camunda.bpm.engine.impl.db.PersistenceSession;
 import org.camunda.bpm.engine.impl.interceptor.Session;
 import org.camunda.bpm.engine.impl.interceptor.SessionFactory;
 
-public class CassandraPersistenceProviderFactory implements SessionFactory {
+public class CassandraPersistenceSessionFactory implements SessionFactory {
 
   protected com.datastax.driver.core.Session cassandraSession;
 
-  public CassandraPersistenceProviderFactory(com.datastax.driver.core.Session session) {
+  public CassandraPersistenceSessionFactory(com.datastax.driver.core.Session session) {
     this.cassandraSession = session;
   }
 

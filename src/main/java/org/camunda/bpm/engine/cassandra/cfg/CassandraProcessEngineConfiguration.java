@@ -1,5 +1,6 @@
 package org.camunda.bpm.engine.cassandra.cfg;
 
+import org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSessionFactory;
 import org.camunda.bpm.engine.impl.cfg.StandaloneProcessEngineConfiguration;
 import org.camunda.bpm.engine.impl.persistence.StrongUuidGenerator;
 
@@ -23,7 +24,7 @@ public class CassandraProcessEngineConfiguration extends StandaloneProcessEngine
   
   @Override
   protected void initPersistenceProviders() {
-    addSessionFactory(new CassandraPersistenceProviderFactory(session));
+    addSessionFactory(new CassandraPersistenceSessionFactory(session));
   }
   
   protected void initCassandraClient() {
