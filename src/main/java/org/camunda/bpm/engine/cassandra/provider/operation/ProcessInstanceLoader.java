@@ -18,6 +18,10 @@ import com.datastax.driver.core.UDTValue;
 
 public class ProcessInstanceLoader implements CompositeEntityLoader {
 
+  public static final String NAME = "process-instance-compostite";
+  public static final String EVENT_SUBSCRIPTIONS = "event_subscriptions";
+  public static final String EXECUTIONS = "executions";
+  
   public LoadedCompositeEntity getEntityById(CassandraPersistenceSession session, String id) {
     LoadedCompositeEntity loadedProcessInstance = new LoadedCompositeEntity();
     
@@ -32,7 +36,7 @@ public class ProcessInstanceLoader implements CompositeEntityLoader {
     CassandraSerializer<EventSubscriptionEntity> serializer = session.getSerializer(EventSubscriptionEntity.class);
     
     // deserialize all executions
-    Map<String, UDTValue> executionsMap = row.getMap("executions", String.class, UDTValue.class);
+    Map<String, UDTValue> executionsMap = row.getMap(EXECUTIONS, String.class, UDTValue.class);
     Map<String, ExecutionEntity> executions = new HashMap<String, ExecutionEntity>();
     for (UDTValue serializedExecution : executionsMap.values()) {
       ExecutionEntity executionEntity = executionSerializer.read(serializedExecution);
@@ -42,16 +46,16 @@ public class ProcessInstanceLoader implements CompositeEntityLoader {
       }
       
     }
-    loadedProcessInstance.put("executions", executions);
+    loadedProcessInstance.put(EXECUTIONS, executions);
     
     // deserialize all event subscription    
-    Map<String, UDTValue> eventSubscriptionsMap = row.getMap("event_subscriptions", String.class, UDTValue.class);
+    Map<String, UDTValue> eventSubscriptionsMap = row.getMap(EVENT_SUBSCRIPTIONS, String.class, UDTValue.class);
     Map<String, EventSubscriptionEntity> eventSubscriptions = new HashMap<String, EventSubscriptionEntity>();
     for (UDTValue serializedEventSubscription : eventSubscriptionsMap.values()) {
       EventSubscriptionEntity eventSubscriptionEntity = serializer.read(serializedEventSubscription);
       eventSubscriptions.put(eventSubscriptionEntity.getId(), eventSubscriptionEntity);
     }
-    loadedProcessInstance.put("event_subscriptions", eventSubscriptions);
+    loadedProcessInstance.put(EVENT_SUBSCRIPTIONS, eventSubscriptions);
     
     return loadedProcessInstance;
   }
