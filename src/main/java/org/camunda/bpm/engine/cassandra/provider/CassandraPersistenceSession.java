@@ -1,5 +1,6 @@
 package org.camunda.bpm.engine.cassandra.provider;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -67,12 +68,19 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
       ProcessInstanceTableHandler processInstanceTableHandler = getHandlerForType(ExecutionEntity.class);
       CassandraProcessInstance cpi = processInstanceTableHandler.findById(cassandraSession, executionQuery.getProcessInstanceId());
       
+      if(cpi == null) {
+        return null;
+      }
+      
+      
       List<EventSubscriptionQueryValue> eventSubscriptions = executionQuery.getEventSubscriptions();
-      for (EventSubscriptionQueryValue eventSubscriptionQueryValue : eventSubscriptions) {
-        for (EventSubscriptionEntity evtSubs : cpi.getEventSubscriptions().values()) {
-         
+      EventSubscriptionQueryValue eventSubscriptionQueryValue = eventSubscriptions.get(0);
+      
+      for (EventSubscriptionEntity entity : cpi.getEventSubscriptions().values()) {
+        if(eventSubscriptionQueryValue.getEventName().equals(entity.getEventName())) {
+          return Arrays.asList(cpi.getExecutions().get(entity.getExecutionId()));
         }
-      };
+      }
     }
     
     
