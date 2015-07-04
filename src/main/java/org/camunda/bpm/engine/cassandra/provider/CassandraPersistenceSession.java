@@ -22,6 +22,7 @@ import org.camunda.bpm.engine.cassandra.provider.operation.ProcessDefinitionOper
 import org.camunda.bpm.engine.cassandra.provider.operation.ProcessInstanceLoader;
 import org.camunda.bpm.engine.cassandra.provider.operation.ResourceOperations;
 import org.camunda.bpm.engine.cassandra.provider.operation.SingleEntityLoader;
+import org.camunda.bpm.engine.cassandra.provider.operation.VariableEntityOperations;
 import org.camunda.bpm.engine.cassandra.provider.query.SelectLatestProcessDefinitionByKeyQueryHandler;
 import org.camunda.bpm.engine.cassandra.provider.query.SingleResultQueryHandler;
 import org.camunda.bpm.engine.cassandra.provider.serializer.CassandraSerializer;
@@ -30,6 +31,7 @@ import org.camunda.bpm.engine.cassandra.provider.serializer.EventSubscriptionSer
 import org.camunda.bpm.engine.cassandra.provider.serializer.ExecutionEntitySerializer;
 import org.camunda.bpm.engine.cassandra.provider.serializer.ProcessDefinitionSerializer;
 import org.camunda.bpm.engine.cassandra.provider.serializer.ResourceEntitySerializer;
+import org.camunda.bpm.engine.cassandra.provider.serializer.VariableEntitySerializer;
 import org.camunda.bpm.engine.cassandra.provider.table.DeploymentTableHandler;
 import org.camunda.bpm.engine.cassandra.provider.table.ProcessDefinitionTableHandler;
 import org.camunda.bpm.engine.cassandra.provider.table.ProcessInstanceTableHandler;
@@ -83,7 +85,8 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     serializers.put(ProcessDefinitionEntity.class, new ProcessDefinitionSerializer());
     serializers.put(ResourceEntity.class, new ResourceEntitySerializer());
     serializers.put(DeploymentEntity.class, new DeploymentEntitySerializer());
-    
+    serializers.put(VariableInstanceEntity.class, new VariableEntitySerializer());
+        
     udtHandlers.put(ExecutionEntity.class, new ExecutionTypeHandler());
     udtHandlers.put(VariableInstanceEntity.class, new VariableTypeHandler());
     udtHandlers.put(EventSubscriptionEntity.class, new EventSubscriptionTypeHandler());
@@ -98,6 +101,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     operations.put(ResourceEntity.class, new ResourceOperations());
     operations.put(DeploymentEntity.class, new DeploymentOperations());
     operations.put(ExecutionEntity.class, new ExecutionEntityOperations());
+    operations.put(VariableInstanceEntity.class, new VariableEntityOperations());
 
     singleEntityLoaders.put(ProcessDefinitionEntity.class, new ProcessDefinitionLoader());
     

@@ -1,5 +1,8 @@
 package org.camunda.bpm.engine.cassandra;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.camunda.bpm.engine.ProcessEngine;
 import org.camunda.bpm.engine.ProcessEngineConfiguration;
 import org.camunda.bpm.engine.cassandra.cfg.CassandraProcessEngineConfiguration;
@@ -62,8 +65,12 @@ public class InitProcessEngineTest {
      .addModelInstance("test.bpmn", theProcess)
      .deploy();
     
+    Map<String, Object> vars= new HashMap<String, Object>();
+    vars.put("testVar", "testVarValue");
     ProcessInstance processInstance = processEngine.getRuntimeService()
-     .startProcessInstanceByKey("testProcess");
+     .startProcessInstanceByKey("testProcess", vars);
+    
+    //processEngine.getRuntimeService().getVariable(processInstance.getId(), "testVar");
     
     processEngine.getRuntimeService()
       .createMessageCorrelation("orderCancelled")

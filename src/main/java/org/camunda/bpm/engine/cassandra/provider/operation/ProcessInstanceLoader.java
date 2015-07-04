@@ -11,6 +11,7 @@ import org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSession;
 import org.camunda.bpm.engine.cassandra.provider.serializer.CassandraSerializer;
 import org.camunda.bpm.engine.impl.persistence.entity.EventSubscriptionEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity;
+import org.camunda.bpm.engine.impl.persistence.entity.VariableInstanceEntity;
 
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
@@ -29,7 +30,8 @@ public class ProcessInstanceLoader implements CompositeEntityLoader {
     }
 
     CassandraSerializer<ExecutionEntity> executionSerializer = session.getSerializer(ExecutionEntity.class);
-    CassandraSerializer<EventSubscriptionEntity> serializer = session.getSerializer(EventSubscriptionEntity.class);
+    CassandraSerializer<EventSubscriptionEntity> eventSubscriptionSerializer = session.getSerializer(EventSubscriptionEntity.class);
+    CassandraSerializer<VariableInstanceEntity> variableSerializer = session.getSerializer(VariableInstanceEntity.class);
     
     // deserialize all executions
     Map<String, UDTValue> executionsMap = row.getMap("executions", String.class, UDTValue.class);
@@ -48,9 +50,19 @@ public class ProcessInstanceLoader implements CompositeEntityLoader {
     Map<String, UDTValue> eventSubscriptionsMap = row.getMap("event_subscriptions", String.class, UDTValue.class);
     Map<String, EventSubscriptionEntity> eventSubscriptions = new HashMap<String, EventSubscriptionEntity>();
     for (UDTValue serializedEventSubscription : eventSubscriptionsMap.values()) {
-      EventSubscriptionEntity eventSubscriptionEntity = serializer.read(serializedEventSubscription);
+      EventSubscriptionEntity eventSubscriptionEntity = eventSubscriptionSerializer.read(serializedEventSubscription);
       eventSubscriptions.put(eventSubscriptionEntity.getId(), eventSubscriptionEntity);
     }
+    loadedProcessInstance.put("eventSubscriptions", eventSubscriptions);
+    
+    // deserialize all variables    
+    Map<String, UDTValue> variablesMap = row.getMap("variables", String.class, UDTValue.class);
+    Map<String, VariableInstanceEntity> variables = new HashMap<String, VariableInstanceEntity>();
+    for (UDTValue serializedVariable : variablesMap.values()) {
+      VariableInstanceEntity variableEntity = variableSerializer.read(serializedVariable);
+      variables.put(variableEntity.getId(), variableEntity);
+    }
+    loadedProcessInstance.put("variables", variables);
     
     return loadedProcessInstance;
   }

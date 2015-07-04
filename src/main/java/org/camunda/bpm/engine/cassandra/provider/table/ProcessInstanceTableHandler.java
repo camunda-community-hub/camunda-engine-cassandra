@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.camunda.bpm.engine.cassandra.provider.type.EventSubscriptionTypeHandler;
 import org.camunda.bpm.engine.cassandra.provider.type.ExecutionTypeHandler;
+import org.camunda.bpm.engine.cassandra.provider.type.VariableTypeHandler;
 
 import com.datastax.driver.core.Session;
 
@@ -18,6 +19,7 @@ public class ProcessInstanceTableHandler implements TableHandler {
       + "business_key text, "
       + "executions map <text, frozen <"+ExecutionTypeHandler.TYPE_NAME+">>,"
       + "event_subscriptions map <text, frozen <"+EventSubscriptionTypeHandler.TYPE_NAME+">>,"
+      + "variables map <text, frozen <"+VariableTypeHandler.TYPE_NAME+">>,"
       + "PRIMARY KEY (id));";
   
   public final static String DROP_TABLE = "DROP TABLE IF EXISTS "+TABLE_NAME+";";

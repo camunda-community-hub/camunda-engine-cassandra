@@ -20,7 +20,6 @@ public class VariableTypeHandler extends AbstractTypeHandler {
 
   public final static String CREATE_TYPE_STATEMENT = "CREATE TYPE IF NOT EXISTS " + TYPE_NAME + " ("
     + "id text,"
-    + "rev int,"
     + "type text,"
     + "name text,"
     + "execution_id text,"
@@ -33,8 +32,7 @@ public class VariableTypeHandler extends AbstractTypeHandler {
     + "long bigint,"
     + "text text,"
     + "text2 text,"
-    + "var_scope text,"
-    + "sequence_counter int,"
+    + "sequence_counter bigint,"
     + "is_concurrent_local boolean"
     + ");";
 
