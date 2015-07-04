@@ -17,6 +17,8 @@ public class ResourceTableHandler implements TableHandler {
       + "PRIMARY KEY (id));";
   
   protected final static String DROP_TABLE = "DROP TABLE IF EXISTS "+TABLE_NAME;
+  
+  protected final static String DEPLOYMENT_ID_IDX = "CREATE INDEX deployment_idx ON "+TABLE_NAME+" ( deployment_id );";
 
   public List<String> getTableNames() {
     return Collections.singletonList(TABLE_NAME);
@@ -24,6 +26,7 @@ public class ResourceTableHandler implements TableHandler {
 
   public void createTable(Session s) {
     s.execute(CREATE_TABLE_STMNT);
+    s.execute(DEPLOYMENT_ID_IDX);
   }
   
   public void dropTable(Session s) {

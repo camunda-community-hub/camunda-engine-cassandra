@@ -14,6 +14,7 @@ import java.util.logging.Logger;
 import org.camunda.bpm.engine.ProcessEngine;
 import org.camunda.bpm.engine.ProcessEngineException;
 import org.camunda.bpm.engine.cassandra.provider.operation.BulkDeleteDeployment;
+import org.camunda.bpm.engine.cassandra.provider.operation.BulkDeleteResourcesByDeploymentId;
 import org.camunda.bpm.engine.cassandra.provider.operation.BulkOperationHandler;
 import org.camunda.bpm.engine.cassandra.provider.operation.CompositeEntityLoader;
 import org.camunda.bpm.engine.cassandra.provider.operation.DeploymentLoader;
@@ -124,6 +125,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     listResultQueryHandlers.put("selectProcessInstanceByQueryCriteria", new SelectProcessInstanceByQueryCriteria());
     
     bulkOperationHandlers.put("deleteDeployment", new BulkDeleteDeployment());
+    bulkOperationHandlers.put("deleteResourcesByDeploymentId", new BulkDeleteResourcesByDeploymentId());
   }
   
   public CassandraPersistenceSession(com.datastax.driver.core.Session session) {
