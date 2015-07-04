@@ -24,13 +24,13 @@ public class EventSubscriptionOperations implements EntityOperations<EventSubscr
     flush.add(QueryBuilder.delete().mapElt("event_subscriptions", entity.getId())
         .from(ProcessInstanceTableHandler.TABLE_NAME).where(eq("id", entity.getProcessInstanceId())));
     
-    session.ensureOptimisticLocking(entity.getProcessInstanceId());
+    session.ensureUpdateLock(entity.getProcessInstanceId());
 
   }
 
   public void update(CassandraPersistenceSession session, EventSubscriptionEntity entity, BatchStatement flush) {
     writeValue(session, entity, flush);
-    session.ensureOptimisticLocking(entity.getProcessInstanceId());
+    session.ensureUpdateLock(entity.getProcessInstanceId());
   }
 
   protected void writeValue(CassandraPersistenceSession session, EventSubscriptionEntity entity, BatchStatement flush) {

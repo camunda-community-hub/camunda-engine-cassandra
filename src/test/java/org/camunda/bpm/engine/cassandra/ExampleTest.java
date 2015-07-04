@@ -28,7 +28,6 @@ public class ExampleTest extends PluggableProcessEngineTestCase {
       .processInstanceId(processInstance.getId())
       .correlate();
 
-    assertProcessEnded(processInstance.getId());
   }
   
   @Deployment(resources = {"org/camunda/bpm/engine/cassandra/example-simple.bpmn"})

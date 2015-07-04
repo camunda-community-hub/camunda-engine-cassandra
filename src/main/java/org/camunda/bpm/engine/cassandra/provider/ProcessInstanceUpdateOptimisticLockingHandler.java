@@ -10,27 +10,33 @@ import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity;
 import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.Session;
 
-public class ProcessInstanceOptimisticLockingHandler {
+public class ProcessInstanceUpdateOptimisticLockingHandler {
   
   protected ExecutionEntity processInstance;
   
-  protected boolean isStatementCreated = false;
+  protected boolean shouldLock = false;
   
-  public ProcessInstanceOptimisticLockingHandler(ExecutionEntity entity) {
+  public ProcessInstanceUpdateOptimisticLockingHandler(ExecutionEntity entity) {
     this.processInstance = entity;
   }
   
-  public void lock(Session s, BatchStatement batch) {
-    if(isStatementCreated) {
+  public void lock() {
+    shouldLock = true;
+  }
+
+  public void reset() {
+    shouldLock = false;
+  }
+  
+  public void addStatementIfLocked(Session s, BatchStatement flush) {
+    if(!shouldLock) {
       return;
     }
     
-    batch.add(update(ProcessInstanceTableHandler.TABLE_NAME)
+    flush.add(update(ProcessInstanceTableHandler.TABLE_NAME)
         .with(set("version", processInstance.getRevisionNext()))
         .where(eq("id", processInstance.getId()))
         .onlyIf(eq("version", processInstance.getRevision())));
-    
-    
   }
 
 }

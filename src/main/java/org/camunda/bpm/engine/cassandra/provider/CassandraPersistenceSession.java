@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.camunda.bpm.engine.OptimisticLockingException;
 import org.camunda.bpm.engine.ProcessEngine;
 import org.camunda.bpm.engine.ProcessEngineException;
 import org.camunda.bpm.engine.cassandra.provider.operation.BulkDeleteDeployment;
@@ -64,6 +65,7 @@ import org.camunda.bpm.engine.impl.persistence.entity.VariableInstanceEntity;
 
 import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.KeyspaceMetadata;
+import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 
@@ -86,7 +88,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   protected static Map<String, BulkOperationHandler> bulkOperationHandlers = new HashMap<String, BulkOperationHandler>();
   
   protected BatchStatement batch = new BatchStatement();
-  protected Map<String, ProcessInstanceOptimisticLockingHandler> processInstanceOptimisticLockingHandlers = new HashMap<String, ProcessInstanceOptimisticLockingHandler>();
+  protected Map<String, ProcessInstanceUpdateOptimisticLockingHandler> processInstanceOptimisticLockingHandlers = new HashMap<String, ProcessInstanceUpdateOptimisticLockingHandler>();
   
   static {
     serializers.put(EventSubscriptionEntity.class, new EventSubscriptionSerializer());
@@ -225,7 +227,15 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   }
 
   public void commit() {
-    cassandraSession.execute(batch);
+    for (ProcessInstanceUpdateOptimisticLockingHandler handler : processInstanceOptimisticLockingHandlers.values()) {
+      handler.addStatementIfLocked(cassandraSession, batch);
+    }
+    List<Row> rows = cassandraSession.execute(batch).all();
+    for (Row row : rows) {
+      if(!row.getBool("[applied]")) {
+        throw new OptimisticLockingException("Process instance was updated by another transaction concurrently.");
+      }
+    }
   }
 
   public void rollback() {
@@ -400,12 +410,17 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   }
   
   public void addLoadedProcessInstance(ExecutionEntity e) {
-    processInstanceOptimisticLockingHandlers.put(e.getId(), new ProcessInstanceOptimisticLockingHandler(e));
+    processInstanceOptimisticLockingHandlers.put(e.getId(), new ProcessInstanceUpdateOptimisticLockingHandler(e));
   }
   
-  public void ensureOptimisticLocking(String processInstanceId) {
-    ProcessInstanceOptimisticLockingHandler processInstanceOptimisticLockingHandler = processInstanceOptimisticLockingHandlers.get(processInstanceId);
-    processInstanceOptimisticLockingHandler.lock(cassandraSession, batch);
+  public void ensureUpdateLock(String processInstanceId) {
+    ProcessInstanceUpdateOptimisticLockingHandler processInstanceOptimisticLockingHandler = processInstanceOptimisticLockingHandlers.get(processInstanceId);
+    processInstanceOptimisticLockingHandler.lock();
+  }
+  
+  public void resetUpdateLock(String processInstanceId) {
+    ProcessInstanceUpdateOptimisticLockingHandler processInstanceOptimisticLockingHandler = processInstanceOptimisticLockingHandlers.get(processInstanceId);
+    processInstanceOptimisticLockingHandler.reset();
   }
   
 }

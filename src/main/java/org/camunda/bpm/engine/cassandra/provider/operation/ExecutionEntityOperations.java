@@ -38,20 +38,20 @@ public class ExecutionEntityOperations implements EntityOperations<ExecutionEnti
     
     if(entity.isProcessInstanceExecution()) {
      flush.add(QueryBuilder.delete().all()
-          .from(ProcessInstanceTableHandler.TABLE_NAME).where(eq("id", entity.getProcessInstanceId())));
+          .from(ProcessInstanceTableHandler.TABLE_NAME).where(eq("id", entity.getProcessInstanceId()))
+          .onlyIf(eq("version", entity.getRevision())));
+     session.resetUpdateLock(entity.getProcessInstanceId());
     }
     else {
       flush.add(QueryBuilder.delete().mapElt("executions", entity.getId())
           .from(ProcessInstanceTableHandler.TABLE_NAME).where(eq("id", entity.getProcessInstanceId())));
+      session.ensureUpdateLock(entity.getProcessInstanceId());
     }
-    
-    session.ensureOptimisticLocking(entity.getProcessInstanceId());
-    
   }
 
   public void update(CassandraPersistenceSession session, ExecutionEntity entity, BatchStatement flush) {
     writeValue(session, entity, flush);
-    session.ensureOptimisticLocking(entity.getProcessInstanceId());
+    session.ensureUpdateLock(entity.getProcessInstanceId());
   }
 
   protected void writeValue(CassandraPersistenceSession session, ExecutionEntity entity, BatchStatement flush) {

@@ -34,6 +34,9 @@ public class ProcessInstanceLoader implements CompositeEntityLoader {
     if(row == null) {
       return null;
     }
+    
+    int version = row.getInt("version");
+    String businessKey = row.getString("business_key");
 
     CassandraSerializer<ExecutionEntity> executionSerializer = session.getSerializer(ExecutionEntity.class);
     CassandraSerializer<EventSubscriptionEntity> eventSubscriptionSerializer = session.getSerializer(EventSubscriptionEntity.class);
@@ -71,6 +74,10 @@ public class ProcessInstanceLoader implements CompositeEntityLoader {
     loadedProcessInstance.put(VARIABLES, variables);
     
     reconstructEntityTree(loadedProcessInstance);
+
+    ExecutionEntity processInstance= (ExecutionEntity) loadedProcessInstance.getMainEntity();
+    processInstance.setRevision(version);
+    processInstance.setBusinessKey(businessKey);
     
     session.addLoadedProcessInstance((ExecutionEntity) loadedProcessInstance.getMainEntity());
 
