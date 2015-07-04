@@ -13,7 +13,10 @@ import java.util.logging.Logger;
 
 import org.camunda.bpm.engine.ProcessEngine;
 import org.camunda.bpm.engine.ProcessEngineException;
+import org.camunda.bpm.engine.cassandra.provider.operation.BulkDeleteDeployment;
+import org.camunda.bpm.engine.cassandra.provider.operation.BulkOperationHandler;
 import org.camunda.bpm.engine.cassandra.provider.operation.CompositeEntityLoader;
+import org.camunda.bpm.engine.cassandra.provider.operation.DeploymentLoader;
 import org.camunda.bpm.engine.cassandra.provider.operation.DeploymentOperations;
 import org.camunda.bpm.engine.cassandra.provider.operation.EntityOperations;
 import org.camunda.bpm.engine.cassandra.provider.operation.EventSubscriptionOperations;
@@ -82,6 +85,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   protected static Map<String, CompositeEntityLoader> compositeEntitiyLoader = new HashMap<String, CompositeEntityLoader>();
   protected static Map<String, SingleResultQueryHandler<?>> singleResultQueryHandlers = new HashMap<String, SingleResultQueryHandler<?>>();
   protected static Map<String, SelectListQueryHandler<?, ?>> listResultQueryHandlers = new HashMap<String, SelectListQueryHandler<?,?>>();
+  protected static Map<String, BulkOperationHandler> bulkOperationHandlers = new HashMap<String, BulkOperationHandler>();
   
   protected BatchStatement batch = new BatchStatement();
   
@@ -110,6 +114,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     operations.put(VariableInstanceEntity.class, new VariableEntityOperations());
 
     singleEntityLoaders.put(ProcessDefinitionEntity.class, new ProcessDefinitionLoader());
+    singleEntityLoaders.put(DeploymentEntity.class, new DeploymentLoader());
     
     compositeEntitiyLoader.put(ProcessInstanceLoader.NAME, new ProcessInstanceLoader());
     
@@ -117,6 +122,8 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     
     listResultQueryHandlers.put("selectExecutionsByQueryCriteria", new SelectExecutionsByQueryCriteria());
     listResultQueryHandlers.put("selectProcessInstanceByQueryCriteria", new SelectProcessInstanceByQueryCriteria());
+    
+    bulkOperationHandlers.put("deleteDeployment", new BulkDeleteDeployment());
   }
   
   public CassandraPersistenceSession(com.datastax.driver.core.Session session) {
@@ -257,6 +264,13 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   }
 
   protected void deleteBulk(DbBulkOperation operation) {
+    BulkOperationHandler handler = bulkOperationHandlers.get(operation.getStatement());
+    if(handler == null) {
+      LOG.log(Level.WARNING, "unhandled BULK delete '"+operation+"'");
+    }
+    else {
+      handler.perform(this, operation.getParameter(), batch);
+    }
   }
 
   @SuppressWarnings({ "rawtypes", "unchecked" })
@@ -271,7 +285,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   }
 
   protected void updateBulk(DbBulkOperation operation) {
-    
+    LOG.log(Level.WARNING, "unhandled BULK update '"+operation+"'");
   }
   
   
