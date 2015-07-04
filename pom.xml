@@ -77,9 +77,69 @@
         <filtering>true</filtering>
         <includes>
           <include>**/cassandra.yaml</include>
+          <include>**/camunda.cfg.xml</include>
         </includes>
       </testResource>
     </testResources>
   </build>
+
+  <profiles>
+    <profile>
+      <id>engine-tests</id>
+      <build>
+        <plugins>
+
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <version>2.8</version>
+            <executions>
+              <execution>
+                <id>unpack-engine-tests</id>
+                <phase>generate-test-sources</phase>
+                <goals>
+                  <goal>unpack</goal>
+                </goals>
+                <configuration>
+                  <artifactItems>
+                    <artifactItem>
+                      <groupId>org.camunda.bpm</groupId>
+                      <artifactId>camunda-engine</artifactId>
+                      <version>7.4.0-SNAPSHOT</version>
+                      <type>test-jar</type>
+                      <outputDirectory>${project.build.directory}/test-classes</outputDirectory>
+                      <excludes>**/camunda.cfg.xml</excludes>
+                    </artifactItem>
+                  </artifactItems>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+           <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <version>2.16</version>
+            <configuration>
+              <excludes>
+                <exclude>**/*TestCase.java</exclude>
+
+                <exclude>**/ClassPathScannerTest.java</exclude>
+                <exclude>**/MultipleClasspathRootsClassPathScannerTest.java</exclude>
+
+                <exclude>**/WSDLImporterTest.java</exclude> <!-- http://jira.codehaus.org/browse/ACT-315 -->
+                <exclude>**/JobExecutorTest.java</exclude> <!-- http://jira.codehaus.org/browse/ACT-427 -->
+                <exclude>**/HistoricTaskInstanceUpdateTest.java</exclude> <!-- http://jira.codehaus.org/browse/ACT-485 -->
+                <exclude>**/RepeatingServiceTaskTest.java</exclude>
+
+                <exclude>**/ProcessDiagramRetrievalTest.java</exclude>
+              </excludes>
+              <testFailureIgnore>false</testFailureIgnore>
+              <redirectTestOutputToFile>true</redirectTestOutputToFile>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
 </project>
