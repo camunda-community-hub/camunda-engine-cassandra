@@ -71,6 +71,8 @@ public class ProcessInstanceLoader implements CompositeEntityLoader {
     loadedProcessInstance.put(VARIABLES, variables);
     
     reconstructEntityTree(loadedProcessInstance);
+    
+    session.addLoadedProcessInstance((ExecutionEntity) loadedProcessInstance.getMainEntity());
 
     return loadedProcessInstance;
   }

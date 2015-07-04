@@ -15,6 +15,7 @@ public class CassandraProcessEngineConfiguration extends StandaloneProcessEngine
   protected Cluster cluster;
   protected Session session;
   protected String keyspace;
+  protected int replicationFactor = 1;
 
   @Override
   protected void init() {
@@ -41,7 +42,7 @@ public class CassandraProcessEngineConfiguration extends StandaloneProcessEngine
       KeyspaceMetadata existingKeyspace = cluster.getMetadata().getKeyspace("camunda");
       if(existingKeyspace == null) {
         Session session = cluster.connect();
-        session.execute(String.format("CREATE keyspace %s WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 3 };", keyspace));
+        session.execute(String.format("CREATE keyspace %s WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : " + replicationFactor + " };", keyspace));
         session.close();
       }
       
@@ -96,6 +97,15 @@ public class CassandraProcessEngineConfiguration extends StandaloneProcessEngine
   public CassandraProcessEngineConfiguration setKeyspace(String keyspace) {
     this.keyspace = keyspace;
     return this;
+  }
+  
+  public CassandraProcessEngineConfiguration setReplicationFactor(int replicationFactor) {
+    this.replicationFactor = replicationFactor;
+    return this;
+  }
+  
+  public int getReplicationFactor() {
+    return replicationFactor;
   }
   
 }

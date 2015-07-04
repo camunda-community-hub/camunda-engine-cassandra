@@ -30,15 +30,8 @@ public class ExecutionEntityOperations implements EntityOperations<ExecutionEnti
           entity.getBusinessKey()));
     }
     
-    UDTypeHandler typeHander = session.getTypeHander(ExecutionEntity.class);
-    CassandraSerializer<ExecutionEntity> serializer = session.getSerializer(ExecutionEntity.class);
+    writeValue(session, entity, flush);
     
-    UDTValue value = typeHander.createValue(s);
-    serializer.write(value, entity);
-    
-    flush.add(QueryBuilder.update(ProcessInstanceTableHandler.TABLE_NAME)
-        .with(put("executions", entity.getId(), value))
-        .where(eq("id", entity.getProcessInstanceId())));
   }
 
   public void delete(CassandraPersistenceSession session, ExecutionEntity entity, BatchStatement flush) {
@@ -52,10 +45,27 @@ public class ExecutionEntityOperations implements EntityOperations<ExecutionEnti
           .from(ProcessInstanceTableHandler.TABLE_NAME).where(eq("id", entity.getProcessInstanceId())));
     }
     
+    session.ensureOptimisticLocking(entity.getProcessInstanceId());
+    
   }
 
   public void update(CassandraPersistenceSession session, ExecutionEntity entity, BatchStatement flush) {
+    writeValue(session, entity, flush);
+    session.ensureOptimisticLocking(entity.getProcessInstanceId());
+  }
+
+  protected void writeValue(CassandraPersistenceSession session, ExecutionEntity entity, BatchStatement flush) {
+    Session s = session.getSession();
+
+    UDTypeHandler typeHander = session.getTypeHander(ExecutionEntity.class);
+    CassandraSerializer<ExecutionEntity> serializer = session.getSerializer(ExecutionEntity.class);
     
+    UDTValue value = typeHander.createValue(s);
+    serializer.write(value, entity);
+    
+    flush.add(QueryBuilder.update(ProcessInstanceTableHandler.TABLE_NAME)
+        .with(put("executions", entity.getId(), value))
+        .where(eq("id", entity.getProcessInstanceId())));
   }
 
 }

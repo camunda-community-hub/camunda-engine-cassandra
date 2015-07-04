@@ -42,5 +42,21 @@ public class ExampleTest extends PluggableProcessEngineTestCase {
 
     assertProcessEnded(processInstance.getId());
   }
+  
+  @Deployment(resources = {"org/camunda/bpm/engine/cassandra/example-sequence.bpmn"})
+  public void testEndProcessByCancelMessageSequence() {
+    ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("Process_1");
+    assertProcessNotEnded(processInstance.getId());
+
+    runtimeService.createMessageCorrelation("Message-Request")
+      .processInstanceId(processInstance.getId())
+      .correlate();
+    assertProcessNotEnded(processInstance.getId());
+
+    runtimeService.createMessageCorrelation("Message-Approve")
+      .processInstanceId(processInstance.getId())
+      .correlate();
+    assertProcessEnded(processInstance.getId());
+  }
 
 }

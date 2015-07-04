@@ -4,8 +4,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -84,6 +86,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   protected static Map<String, BulkOperationHandler> bulkOperationHandlers = new HashMap<String, BulkOperationHandler>();
   
   protected BatchStatement batch = new BatchStatement();
+  protected Map<String, ProcessInstanceOptimisticLockingHandler> processInstanceOptimisticLockingHandlers = new HashMap<String, ProcessInstanceOptimisticLockingHandler>();
   
   static {
     serializers.put(EventSubscriptionEntity.class, new EventSubscriptionSerializer());
@@ -122,7 +125,10 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     bulkOperationHandlers.put("deleteDeployment", new BulkDeleteDeployment());
     bulkOperationHandlers.put("deleteResourcesByDeploymentId", new BulkDeleteResourcesByDeploymentId());
     bulkOperationHandlers.put("deleteProcessDefinitionsByDeploymentId", new BulkDeleteProcessDefinitionByDeploymentId());
+    
   }
+  
+  protected boolean processInstanceVersionIncremented = false;
   
   public CassandraPersistenceSession(com.datastax.driver.core.Session session) {
     this.cassandraSession = session;
@@ -391,6 +397,15 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
       tableNames.addAll(tableHandler.getTableNames());
     }
     return tableNames;
+  }
+  
+  public void addLoadedProcessInstance(ExecutionEntity e) {
+    processInstanceOptimisticLockingHandlers.put(e.getId(), new ProcessInstanceOptimisticLockingHandler(e));
+  }
+  
+  public void ensureOptimisticLocking(String processInstanceId) {
+    ProcessInstanceOptimisticLockingHandler processInstanceOptimisticLockingHandler = processInstanceOptimisticLockingHandlers.get(processInstanceId);
+    processInstanceOptimisticLockingHandler.lock(cassandraSession, batch);
   }
   
 }
