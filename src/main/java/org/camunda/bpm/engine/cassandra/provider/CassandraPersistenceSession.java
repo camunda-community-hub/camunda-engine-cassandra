@@ -241,15 +241,29 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     
   }
 
+  @SuppressWarnings({ "rawtypes", "unchecked" })
   protected void deleteEntity(DbEntityOperation operation) {
-    LOG.log(Level.WARNING, "unhandled DELETE '"+operation+"'");
+    EntityOperations entityOperations = operations.get(operation.getEntityType());
+    if(entityOperations == null) {
+      LOG.log(Level.WARNING, "unhandled DELETE '"+operation+"'");
+    }
+    else {
+      entityOperations.delete(this, operation.getEntity(), batch);
+    }
   }
 
   protected void deleteBulk(DbBulkOperation operation) {
   }
 
+  @SuppressWarnings({ "rawtypes", "unchecked" })
   protected void updateEntity(DbEntityOperation operation) {
-    LOG.log(Level.WARNING, "unhandled UPDATE '"+operation+"'");
+    EntityOperations entityOperations = operations.get(operation.getEntityType());
+    if(entityOperations == null) {
+      LOG.log(Level.WARNING, "unhandled UPDATE '"+operation+"'");
+    }
+    else {
+      entityOperations.update(this, operation.getEntity(), batch);
+    }
   }
 
   protected void updateBulk(DbBulkOperation operation) {

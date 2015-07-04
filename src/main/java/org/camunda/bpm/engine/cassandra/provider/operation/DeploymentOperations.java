@@ -8,6 +8,9 @@ import org.camunda.bpm.engine.impl.persistence.entity.DeploymentEntity;
 import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Session;
+import com.datastax.driver.core.querybuilder.QueryBuilder;
+
+import static com.datastax.driver.core.querybuilder.QueryBuilder.*;
 
 public class DeploymentOperations implements EntityOperations<DeploymentEntity> {
 
@@ -29,7 +32,7 @@ public class DeploymentOperations implements EntityOperations<DeploymentEntity> 
   }
 
   public void delete(CassandraPersistenceSession session, DeploymentEntity entity, BatchStatement flush) {
-    
+    flush.add(QueryBuilder.delete().all().from(DeploymentTableHandler.TABLE_NAME).where(eq("id", entity.getId())));
   }
 
   public void update(CassandraPersistenceSession session, DeploymentEntity entity, BatchStatement flush) {

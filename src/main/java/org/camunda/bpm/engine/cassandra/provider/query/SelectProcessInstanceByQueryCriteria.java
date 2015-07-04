@@ -1,6 +1,7 @@
 package org.camunda.bpm.engine.cassandra.provider.query;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.camunda.bpm.engine.ProcessEngineException;
@@ -21,8 +22,12 @@ public class SelectProcessInstanceByQueryCriteria implements SelectListQueryHand
     }
     
     LoadedCompositeEntity composite = session.selectCompositeById(ProcessInstanceLoader.NAME, parameter.getProcessInstanceId());
-        
-    return (List) Arrays.asList(composite.getMainEntity());
+    if(composite == null) {
+      return Collections.emptyList();
+    }
+    else {
+      return (List) Arrays.asList(composite.getMainEntity());
+    }
   }
 
 }
