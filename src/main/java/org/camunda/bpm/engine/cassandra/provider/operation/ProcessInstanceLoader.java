@@ -4,6 +4,7 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
 import static org.camunda.bpm.engine.cassandra.provider.table.ProcessInstanceTableHandler.TABLE_NAME;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -57,7 +58,19 @@ public class ProcessInstanceLoader implements CompositeEntityLoader {
     }
     loadedProcessInstance.put(EVENT_SUBSCRIPTIONS, eventSubscriptions);
     
+    reconstructEntityTree(loadedProcessInstance);
+
     return loadedProcessInstance;
+  }
+
+  @SuppressWarnings("unchecked")
+  protected void reconstructEntityTree(LoadedCompositeEntity compositeEntity) {
+    ExecutionEntity processInstance = (ExecutionEntity) compositeEntity.getMainEntity();
+    Map<String, ExecutionEntity> executions = (Map<String, ExecutionEntity>) compositeEntity.getEmbeddedEntities().get(EXECUTIONS);
+    Map<String, EventSubscriptionEntity> eventSubscriptions = (Map<String, EventSubscriptionEntity>) compositeEntity.getEmbeddedEntities().get(EVENT_SUBSCRIPTIONS);
+
+    ExecutionEntity.initializeExecutions(processInstance, executions);
+    ExecutionEntity.initializeEventSubscription(executions, eventSubscriptions.values());
   }
 
 }

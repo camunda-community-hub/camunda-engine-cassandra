@@ -173,7 +173,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   protected void processLoadedComposite(LoadedCompositeEntity composite) {
     DbEntity mainEntity = composite.getMainEntity();
     boolean isMainEntityEventFired = false;
-    for (Map<String, DbEntity> entities : composite.getEmbeddedEntities().values()) {
+    for (Map<String, ? extends DbEntity> entities : composite.getEmbeddedEntities().values()) {
       for (DbEntity entity : entities.values()) {
         fireEntityLoaded(entity);
         if(entity == mainEntity) {
