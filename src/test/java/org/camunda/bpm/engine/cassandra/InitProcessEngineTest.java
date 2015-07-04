@@ -3,8 +3,11 @@ package org.camunda.bpm.engine.cassandra;
 import org.camunda.bpm.engine.ProcessEngine;
 import org.camunda.bpm.engine.ProcessEngineConfiguration;
 import org.camunda.bpm.engine.cassandra.cfg.CassandraProcessEngineConfiguration;
+import org.camunda.bpm.engine.runtime.ProcessInstance;
 import org.camunda.bpm.model.bpmn.Bpmn;
 import org.camunda.bpm.model.bpmn.BpmnModelInstance;
+import org.camunda.bpm.model.bpmn.instance.Message;
+import org.camunda.bpm.model.bpmn.instance.Process;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -31,13 +34,26 @@ public class InitProcessEngineTest {
   @Test
   public void testDeployProcess() {
     
-    BpmnModelInstance theProcess = Bpmn.createExecutableProcess("testProcess")
+    BpmnModelInstance model = Bpmn.createExecutableProcess("testProcess").done();
+    
+    Message message1 = model.newInstance(Message.class);
+    message1.setName("orderCancelled");
+    model.getDefinitions().addChildElement(message1);
+    
+    Message message2 = model.newInstance(Message.class);
+    message2.setName("orderCompleted");
+    model.getDefinitions().addChildElement(message2);
+    
+    BpmnModelInstance theProcess = model.<Process>getModelElementById("testProcess") 
+      .builder()
       .startEvent()
       .parallelGateway()
-        .userTask()
+        .receiveTask()
+          .message(message1)
         .endEvent()
       .moveToLastGateway()
-        .userTask()
+        .receiveTask()
+          .message(message2)
         .endEvent()
     .done();
     
@@ -45,9 +61,13 @@ public class InitProcessEngineTest {
      .addModelInstance("test.bpmn", theProcess)
      .deploy();
     
-    processEngine.getRuntimeService()
+    ProcessInstance processInstance = processEngine.getRuntimeService()
      .startProcessInstanceByKey("testProcess");
     
+    processEngine.getRuntimeService()
+      .createMessageCorrelation("orderCancelled")
+      .processInstanceId(processInstance.getId())
+      .correlate();
   }
   
 }

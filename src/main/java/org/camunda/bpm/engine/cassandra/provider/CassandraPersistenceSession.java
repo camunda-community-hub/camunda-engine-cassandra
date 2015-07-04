@@ -9,22 +9,24 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.camunda.bpm.engine.ProcessEngine;
-import org.camunda.bpm.engine.ProcessEngineConfiguration;
+import org.camunda.bpm.engine.impl.EventSubscriptionQueryValue;
+import org.camunda.bpm.engine.impl.ExecutionQueryImpl;
 import org.camunda.bpm.engine.impl.db.AbstractPersistenceSession;
 import org.camunda.bpm.engine.impl.db.DbEntity;
 import org.camunda.bpm.engine.impl.db.entitymanager.operation.DbBulkOperation;
 import org.camunda.bpm.engine.impl.db.entitymanager.operation.DbEntityOperation;
-import org.camunda.bpm.engine.impl.db.entitymanager.operation.DbOperation;
+import org.camunda.bpm.engine.impl.history.parser.ProcessInstanceEndListener;
 import org.camunda.bpm.engine.impl.persistence.entity.DeploymentEntity;
+import org.camunda.bpm.engine.impl.persistence.entity.EventSubscriptionEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity;
+import org.camunda.bpm.engine.impl.persistence.entity.MessageEventSubscriptionEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.ProcessDefinitionEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.ResourceEntity;
+import org.camunda.bpm.engine.impl.persistence.entity.VariableInstanceEntity;
 
 import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Session;
-import com.datastax.driver.core.Statement;
-import com.datastax.driver.core.querybuilder.QueryBuilder;
 
 public class CassandraPersistenceSession extends AbstractPersistenceSession {
   
@@ -34,14 +36,21 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   
   protected StringBuilder batchBuilder = new StringBuilder();
 
-  protected static Map<Class<?>, TableHandler<?>> handlers = new HashMap<Class<?>, TableHandler<?>>();
+  protected static Map<Class<?>, TableHandler<?>> tableHandlers = new HashMap<Class<?>, TableHandler<?>>();
+  protected static Map<Class<?>, TypeHandler<?>> typeHandlers = new HashMap<Class<?>, TypeHandler<?>>();
   
   protected BatchStatement batch = new BatchStatement();
   
   static {
-    handlers.put(ProcessDefinitionEntity.class, new ProcessDefinitionTableHandler());
-    handlers.put(ResourceEntity.class, new ResourceTableHandler());
-    handlers.put(DeploymentEntity.class, new DeploymentTableHandler());
+    typeHandlers.put(ExecutionEntity.class, new ExecutionTypeHandler());
+    typeHandlers.put(VariableInstanceEntity.class, new VariableTypeHandler());
+    typeHandlers.put(EventSubscriptionEntity.class, new EventSubscriptionTypeHandler());
+    
+    tableHandlers.put(ProcessDefinitionEntity.class, new ProcessDefinitionTableHandler());
+    tableHandlers.put(ResourceEntity.class, new ResourceTableHandler());
+    tableHandlers.put(DeploymentEntity.class, new DeploymentTableHandler());
+    tableHandlers.put(ExecutionEntity.class, new ProcessInstanceTableHandler());
+    tableHandlers.put(MessageEventSubscriptionEntity.class, new EventSubscriptionTableHandler());
   }
   
   public CassandraPersistenceSession(com.datastax.driver.core.Session session) {
@@ -50,6 +59,21 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
 
   public List<?> selectList(String statement, Object parameter) {
 
+    if("selectExecutionsByQueryCriteria".equals(statement)) {
+      ExecutionQueryImpl executionQuery = (ExecutionQueryImpl) parameter;
+      if(executionQuery.getProcessInstanceId() == null) {
+        throw new RuntimeException("Unsupported Execution Query: process instance id needs to be provided. Got: "+executionQuery);
+      }
+      ProcessInstanceTableHandler processInstanceTableHandler = getHandlerForType(ExecutionEntity.class);
+      CassandraProcessInstance cpi = processInstanceTableHandler.findById(cassandraSession, executionQuery.getProcessInstanceId());
+      
+      List<EventSubscriptionQueryValue> eventSubscriptions = executionQuery.getEventSubscriptions();
+      for (EventSubscriptionQueryValue eventSubscriptionQueryValue : eventSubscriptions) {
+        for (EventSubscriptionEntity evtSubs : cpi.getEventSubscriptions().values()) {
+         
+        }
+      };
+    }
     
     
     LOG.log(Level.WARNING, "unhandled select statement '"+statement+"'");
@@ -59,7 +83,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
 
   @SuppressWarnings("unchecked")
   protected <T extends TableHandler<?>> T getHandlerForType(Class<?> type) {
-    return (T) handlers.get(type);
+    return (T) tableHandlers.get(type);
   }
 
   public <T extends DbEntity> T selectById(Class<T> type, String id) {
@@ -110,13 +134,13 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   @SuppressWarnings({ "rawtypes", "unchecked" })
   protected void insertEntity(DbEntityOperation operation) {
     
-    TableHandler handler = handlers.get(operation.getEntityType());
+    TableHandler handler = tableHandlers.get(operation.getEntityType());
     if(handler == null) {
       LOG.log(Level.WARNING, "unhandled INSERT '"+operation+"'");
     }
     else {
       batch.addAll(handler.createInsertStatement(cassandraSession, (Object) operation.getEntity()));
-    }     
+    }
     
   }
 
@@ -152,8 +176,13 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
 
   
   protected void dbSchemaCreateEngine() {
-    Collection<TableHandler<?>> tableHandlers = handlers.values();
-    for (TableHandler<?> tableHandler : tableHandlers) {
+    Collection<TypeHandler<?>> typeHandlers_ = typeHandlers.values();
+    for (TypeHandler<?> typeHandler : typeHandlers_) {
+      typeHandler.createType(cassandraSession);
+    }
+    
+    Collection<TableHandler<?>> tableHandlers_ = tableHandlers.values();
+    for (TableHandler<?> tableHandler : tableHandlers_) {
       tableHandler.createTable(cassandraSession);
     }
   }
@@ -175,10 +204,17 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   }
 
   protected void dbSchemaDropEngine() {
-    Collection<TableHandler<?>> tableHandlers = handlers.values();
-    for (TableHandler<?> tableHandler : tableHandlers) {
+    
+    Collection<TableHandler<?>> tableHandlers_ = tableHandlers.values();
+    for (TableHandler<?> tableHandler : tableHandlers_) {
       tableHandler.dropTable(cassandraSession);
     }
+    
+    Collection<TypeHandler<?>> typeHandlers_ = typeHandlers.values();
+    for (TypeHandler<?> typeHandler : typeHandlers_) {
+      typeHandler.dropType(cassandraSession);
+    }
+    
   }
 
   protected void dbSchemaDropCmmn() {
