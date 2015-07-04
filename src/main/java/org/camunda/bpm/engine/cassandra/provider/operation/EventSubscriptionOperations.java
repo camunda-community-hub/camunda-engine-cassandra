@@ -1,6 +1,7 @@
 package org.camunda.bpm.engine.cassandra.provider.operation;
 
-import static com.datastax.driver.core.querybuilder.QueryBuilder.*;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.put;
 
 import org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSession;
 import org.camunda.bpm.engine.cassandra.provider.serializer.CassandraSerializer;
@@ -8,32 +9,29 @@ import org.camunda.bpm.engine.cassandra.provider.table.ProcessInstanceTableHandl
 import org.camunda.bpm.engine.cassandra.provider.type.UDTypeHandler;
 import org.camunda.bpm.engine.impl.persistence.entity.EventSubscriptionEntity;
 
-import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.Session;
+import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.UDTValue;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 
-public class EventSubscriptionOperations implements EntityOperations<EventSubscriptionEntity> {
+public class EventSubscriptionOperations implements EntityOperationHandler<EventSubscriptionEntity> {
   
-  public void insert(CassandraPersistenceSession session, EventSubscriptionEntity entity, BatchStatement flush) {
-    writeValue(session, entity, flush);
+  public void insert(CassandraPersistenceSession session, EventSubscriptionEntity entity) {
+    session.addStatement(createUpdateStatement(session, entity));
   }
 
-  public void delete(CassandraPersistenceSession session, EventSubscriptionEntity entity, BatchStatement flush) {
+  public void delete(CassandraPersistenceSession session, EventSubscriptionEntity entity) {
     
-    flush.add(QueryBuilder.delete().mapElt("event_subscriptions", entity.getId())
-        .from(ProcessInstanceTableHandler.TABLE_NAME).where(eq("id", entity.getProcessInstanceId())));
-    
-    session.ensureUpdateLock(entity.getProcessInstanceId());
-
+    session.addStatement(QueryBuilder.delete().mapElt("event_subscriptions", entity.getId())
+        .from(ProcessInstanceTableHandler.TABLE_NAME).where(eq("id", entity.getProcessInstanceId())),
+        entity.getProcessInstanceId());
   }
 
-  public void update(CassandraPersistenceSession session, EventSubscriptionEntity entity, BatchStatement flush) {
-    writeValue(session, entity, flush);
-    session.ensureUpdateLock(entity.getProcessInstanceId());
+  public void update(CassandraPersistenceSession session, EventSubscriptionEntity entity) {
+    session.addStatement(createUpdateStatement(session, entity), entity.getProcessInstanceId());
   }
 
-  protected void writeValue(CassandraPersistenceSession session, EventSubscriptionEntity entity, BatchStatement flush) {
+  protected Statement createUpdateStatement(CassandraPersistenceSession session, EventSubscriptionEntity entity) {
     Session s = session.getSession();
     UDTypeHandler typeHander = session.getTypeHander(EventSubscriptionEntity.class);
     CassandraSerializer<EventSubscriptionEntity> serializer = session.getSerializer(EventSubscriptionEntity.class);
@@ -41,9 +39,9 @@ public class EventSubscriptionOperations implements EntityOperations<EventSubscr
     UDTValue value = typeHander.createValue(s);
     serializer.write(value, entity);
     
-    flush.add(QueryBuilder.update(ProcessInstanceTableHandler.TABLE_NAME)
+    return QueryBuilder.update(ProcessInstanceTableHandler.TABLE_NAME)
         .with(put("event_subscriptions", entity.getId(), value))
-        .where(eq("id", entity.getProcessInstanceId())));
+        .where(eq("id", entity.getProcessInstanceId()));
   }
   
 }

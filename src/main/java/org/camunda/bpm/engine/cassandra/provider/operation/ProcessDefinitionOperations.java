@@ -14,7 +14,7 @@ import com.datastax.driver.core.querybuilder.QueryBuilder;
 
 import static org.camunda.bpm.engine.cassandra.provider.table.ProcessDefinitionTableHandler.*; 
 
-public class ProcessDefinitionOperations implements EntityOperations<ProcessDefinitionEntity> {
+public class ProcessDefinitionOperations implements EntityOperationHandler<ProcessDefinitionEntity> {
   
   protected final static String INSERT = "INSERT into "+TABLE_NAME+" (id, key, version, category, name, deployment_id, suspension_state) "
       + "values "
@@ -24,7 +24,7 @@ public class ProcessDefinitionOperations implements EntityOperations<ProcessDefi
       + "values "
       + "(?, ?, ?);";
   
-  public void insert(CassandraPersistenceSession session, ProcessDefinitionEntity entity, BatchStatement flush) {
+  public void insert(CassandraPersistenceSession session, ProcessDefinitionEntity entity) {
     Session s = session.getSession();
 
     CassandraSerializer<ProcessDefinitionEntity> serializer = session.getSerializer(ProcessDefinitionEntity.class);
@@ -32,23 +32,23 @@ public class ProcessDefinitionOperations implements EntityOperations<ProcessDefi
     // insert deployment
     BoundStatement statement = s.prepare(INSERT).bind();    
     serializer.write(statement, entity);     
-    flush.add(statement);
+    session.addStatement(statement);
     
     // write index
-    flush.add(s.prepare(INSERT_IDX_VERSION).bind(
+    session.addStatement(s.prepare(INSERT_IDX_VERSION).bind(
         entity.getKey(),
         entity.getVersion(),
         entity.getId()));
   }
 
-  public void delete(CassandraPersistenceSession session, ProcessDefinitionEntity entity, BatchStatement flush) {
+  public void delete(CassandraPersistenceSession session, ProcessDefinitionEntity entity) {
     
-    flush.add(QueryBuilder.delete().all().from(TABLE_NAME).where(eq("id", entity.getId())));
-    flush.add(QueryBuilder.delete().all().from(INSERT_IDX_VERSION).where(eq("key", entity.getKey())).and(eq("version", entity.getVersion())));
+    session.addStatement(QueryBuilder.delete().all().from(TABLE_NAME).where(eq("id", entity.getId())));
+    session.addStatement(QueryBuilder.delete().all().from(INSERT_IDX_VERSION).where(eq("key", entity.getKey())).and(eq("version", entity.getVersion())));
     
   }
 
-  public void update(CassandraPersistenceSession session, ProcessDefinitionEntity entity, BatchStatement flush) {
+  public void update(CassandraPersistenceSession session, ProcessDefinitionEntity entity) {
     
   }
 

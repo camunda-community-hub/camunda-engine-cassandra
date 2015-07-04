@@ -12,13 +12,13 @@ import com.datastax.driver.core.querybuilder.QueryBuilder;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.*;
 
-public class DeploymentOperations implements EntityOperations<DeploymentEntity> {
+public class DeploymentOperations implements EntityOperationHandler<DeploymentEntity> {
 
   protected final static String INSERT_STMNT = "INSERT into "+DeploymentTableHandler.TABLE_NAME+" (id, name, deploy_time) "
       + "values "
       + "(?, ?, ?);";
   
-  public void insert(CassandraPersistenceSession session, DeploymentEntity entity, BatchStatement flush) {
+  public void insert(CassandraPersistenceSession session, DeploymentEntity entity) {
 
     Session s = session.getSession();
 
@@ -28,14 +28,14 @@ public class DeploymentOperations implements EntityOperations<DeploymentEntity> 
     
     serializer.write(statement, entity); 
     
-    flush.add(statement);
+    session.addStatement(statement);
   }
 
-  public void delete(CassandraPersistenceSession session, DeploymentEntity entity, BatchStatement flush) {
-    flush.add(QueryBuilder.delete().all().from(DeploymentTableHandler.TABLE_NAME).where(eq("id", entity.getId())));
+  public void delete(CassandraPersistenceSession session, DeploymentEntity entity) {
+    session.addStatement(QueryBuilder.delete().all().from(DeploymentTableHandler.TABLE_NAME).where(eq("id", entity.getId())));
   }
 
-  public void update(CassandraPersistenceSession session, DeploymentEntity entity, BatchStatement flush) {
+  public void update(CassandraPersistenceSession session, DeploymentEntity entity) {
     
   }
 

@@ -9,14 +9,13 @@ import org.camunda.bpm.engine.cassandra.provider.table.ProcessInstanceTableHandl
 import org.camunda.bpm.engine.cassandra.provider.type.UDTypeHandler;
 import org.camunda.bpm.engine.impl.persistence.entity.VariableInstanceEntity;
 
-import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.UDTValue;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 
-public class VariableEntityOperations implements EntityOperations<VariableInstanceEntity>{
+public class VariableEntityOperations implements EntityOperationHandler<VariableInstanceEntity>{
 
-  public void insert(CassandraPersistenceSession session, VariableInstanceEntity entity, BatchStatement flush) {
+  public void insert(CassandraPersistenceSession session, VariableInstanceEntity entity) {
     
     Session s = session.getSession();
     
@@ -26,16 +25,16 @@ public class VariableEntityOperations implements EntityOperations<VariableInstan
     UDTValue value = typeHander.createValue(s);
     serializer.write(value, entity);
     
-    flush.add(QueryBuilder.update(ProcessInstanceTableHandler.TABLE_NAME)
+    session.addStatement(QueryBuilder.update(ProcessInstanceTableHandler.TABLE_NAME)
         .with(put("variables", entity.getId(), value))
         .where(eq("id", entity.getProcessInstanceId())));
   }
 
-  public void delete(CassandraPersistenceSession session, VariableInstanceEntity entity, BatchStatement flush) {
+  public void delete(CassandraPersistenceSession session, VariableInstanceEntity entity) {
     
   }
 
-  public void update(CassandraPersistenceSession session, VariableInstanceEntity entity, BatchStatement flush) {
+  public void update(CassandraPersistenceSession session, VariableInstanceEntity entity) {
     
   }
 

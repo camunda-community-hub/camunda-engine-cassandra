@@ -20,7 +20,7 @@ import org.camunda.bpm.engine.cassandra.provider.operation.BulkOperationHandler;
 import org.camunda.bpm.engine.cassandra.provider.operation.CompositeEntityLoader;
 import org.camunda.bpm.engine.cassandra.provider.operation.DeploymentLoader;
 import org.camunda.bpm.engine.cassandra.provider.operation.DeploymentOperations;
-import org.camunda.bpm.engine.cassandra.provider.operation.EntityOperations;
+import org.camunda.bpm.engine.cassandra.provider.operation.EntityOperationHandler;
 import org.camunda.bpm.engine.cassandra.provider.operation.EventSubscriptionOperations;
 import org.camunda.bpm.engine.cassandra.provider.operation.ExecutionEntityOperations;
 import org.camunda.bpm.engine.cassandra.provider.operation.LoadedCompositeEntity;
@@ -67,6 +67,7 @@ import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
+import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 
 public class CassandraPersistenceSession extends AbstractPersistenceSession {
@@ -80,15 +81,17 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   protected static List<TableHandler> tableHandlers = new ArrayList<TableHandler>();
   protected static Map<Class<?>, UDTypeHandler> udtHandlers = new HashMap<Class<?>, UDTypeHandler>();  
   protected static Map<Class<?>, CassandraSerializer<?>> serializers = new HashMap<Class<?>, CassandraSerializer<?>>();
-  protected static Map<Class<?>, EntityOperations<?>> operations = new HashMap<Class<?>, EntityOperations<?>>();
+  protected static Map<Class<?>, EntityOperationHandler<?>> operations = new HashMap<Class<?>, EntityOperationHandler<?>>();
   protected static Map<Class<?>, SingleEntityLoader<?>> singleEntityLoaders = new HashMap<Class<?>, SingleEntityLoader<?>>();
   protected static Map<String, CompositeEntityLoader> compositeEntitiyLoader = new HashMap<String, CompositeEntityLoader>();
   protected static Map<String, SingleResultQueryHandler<?>> singleResultQueryHandlers = new HashMap<String, SingleResultQueryHandler<?>>();
   protected static Map<String, SelectListQueryHandler<?, ?>> listResultQueryHandlers = new HashMap<String, SelectListQueryHandler<?,?>>();
   protected static Map<String, BulkOperationHandler> bulkOperationHandlers = new HashMap<String, BulkOperationHandler>();
   
-  protected BatchStatement batch = new BatchStatement();
-  protected Map<String, ProcessInstanceUpdateOptimisticLockingHandler> processInstanceOptimisticLockingHandlers = new HashMap<String, ProcessInstanceUpdateOptimisticLockingHandler>();
+  protected BatchStatement varietyBatch = new BatchStatement();
+  
+  protected Map<String, ProcessInstanceBatch> batchesWithLocking = new HashMap<String, ProcessInstanceBatch>();
+  
   
   static {
     serializers.put(EventSubscriptionEntity.class, new EventSubscriptionSerializer());
@@ -227,9 +230,13 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   }
 
   public void commit() {
-    for (ProcessInstanceUpdateOptimisticLockingHandler handler : processInstanceOptimisticLockingHandlers.values()) {
-      handler.addStatementIfLocked(cassandraSession, batch);
+    for (ProcessInstanceBatch batchWithLocking : batchesWithLocking.values()) {
+      flushBatch(batchWithLocking.getBatch());
     }
+    flushBatch(varietyBatch);
+  }
+
+  private void flushBatch(BatchStatement batch) {
     List<Row> rows = cassandraSession.execute(batch).all();
     for (Row row : rows) {
       if(!row.getBool("[applied]")) {
@@ -256,24 +263,24 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   
   @SuppressWarnings({ "rawtypes", "unchecked" })
   protected void insertEntity(DbEntityOperation operation) {
-    EntityOperations entityOperations = operations.get(operation.getEntityType());
+    EntityOperationHandler entityOperations = operations.get(operation.getEntityType());
     if(entityOperations == null) {
       LOG.log(Level.WARNING, "unhandled INSERT '"+operation+"'");
     }
     else {
-      entityOperations.insert(this, operation.getEntity(), batch);
+      entityOperations.insert(this, operation.getEntity());
     }
     
   }
 
   @SuppressWarnings({ "rawtypes", "unchecked" })
   protected void deleteEntity(DbEntityOperation operation) {
-    EntityOperations entityOperations = operations.get(operation.getEntityType());
+    EntityOperationHandler entityOperations = operations.get(operation.getEntityType());
     if(entityOperations == null) {
       LOG.log(Level.WARNING, "unhandled DELETE '"+operation+"'");
     }
     else {
-      entityOperations.delete(this, operation.getEntity(), batch);
+      entityOperations.delete(this, operation.getEntity());
     }
   }
 
@@ -283,18 +290,18 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
       LOG.log(Level.WARNING, "unhandled BULK delete '"+operation+"'");
     }
     else {
-      handler.perform(this, operation.getParameter(), batch);
+      handler.perform(this, operation.getParameter(), varietyBatch);
     }
   }
 
   @SuppressWarnings({ "rawtypes", "unchecked" })
   protected void updateEntity(DbEntityOperation operation) {
-    EntityOperations entityOperations = operations.get(operation.getEntityType());
+    EntityOperationHandler entityOperations = operations.get(operation.getEntityType());
     if(entityOperations == null) {
       LOG.log(Level.WARNING, "unhandled UPDATE '"+operation+"'");
     }
     else {
-      entityOperations.update(this, operation.getEntity(), batch);
+      entityOperations.update(this, operation.getEntity());
     }
   }
 
@@ -410,17 +417,21 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   }
   
   public void addLoadedProcessInstance(ExecutionEntity e) {
-    processInstanceOptimisticLockingHandlers.put(e.getId(), new ProcessInstanceUpdateOptimisticLockingHandler(e));
+    batchesWithLocking.put(e.getId(), new ProcessInstanceBatch(e));
   }
   
-  public void ensureUpdateLock(String processInstanceId) {
-    ProcessInstanceUpdateOptimisticLockingHandler processInstanceOptimisticLockingHandler = processInstanceOptimisticLockingHandlers.get(processInstanceId);
-    processInstanceOptimisticLockingHandler.lock();
+  public void addStatement(Statement statement, String objectId) {
+    ProcessInstanceBatch processInstanceOptimisticLockingHandler = batchesWithLocking.get(objectId);
+    processInstanceOptimisticLockingHandler.addStatement(statement);
   }
   
-  public void resetUpdateLock(String processInstanceId) {
-    ProcessInstanceUpdateOptimisticLockingHandler processInstanceOptimisticLockingHandler = processInstanceOptimisticLockingHandlers.get(processInstanceId);
-    processInstanceOptimisticLockingHandler.reset();
+  public void deleteBatchObject(String objectId) {
+    ProcessInstanceBatch processInstanceOptimisticLockingHandler = batchesWithLocking.get(objectId);
+    processInstanceOptimisticLockingHandler.setIsDeleted();
+  }
+  
+  public void addStatement(Statement statement) {
+    varietyBatch.add(statement);
   }
   
 }
