@@ -1,6 +1,9 @@
 package org.camunda.bpm.engine.cassandra.provider.table;
 
 
+import java.util.Collections;
+import java.util.List;
+
 public class DeploymentTableHandler extends AbstractTableHandler {
   
   public final static String TABLE_NAME = "CAM_DEPLOYMENT";
@@ -25,4 +28,7 @@ public class DeploymentTableHandler extends AbstractTableHandler {
     return DROP_TABLE;
   }
 
+  public List<String> getTableNames() {
+    return Collections.singletonList(TABLE_NAME);
+  }
 }

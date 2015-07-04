@@ -1,5 +1,8 @@
 package org.camunda.bpm.engine.cassandra.provider.table;
 
+import java.util.Collections;
+import java.util.List;
+
 import com.datastax.driver.core.Session;
 
 public class ResourceTableHandler implements TableHandler {
@@ -14,7 +17,11 @@ public class ResourceTableHandler implements TableHandler {
       + "PRIMARY KEY (id));";
   
   protected final static String DROP_TABLE = "DROP TABLE IF EXISTS "+TABLE_NAME;
-  
+
+  public List<String> getTableNames() {
+    return Collections.singletonList(TABLE_NAME);
+  }
+
   public void createTable(Session s) {
     s.execute(CREATE_TABLE_STMNT);
   }

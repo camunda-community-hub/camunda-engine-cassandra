@@ -1,22 +1,12 @@
 package org.camunda.bpm.engine.cassandra.provider.table;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import org.camunda.bpm.engine.cassandra.provider.type.EventSubscriptionTypeHandler;
 import org.camunda.bpm.engine.cassandra.provider.type.ExecutionTypeHandler;
-import org.camunda.bpm.engine.impl.persistence.entity.EventSubscriptionEntity;
-import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity;
 
-import static com.datastax.driver.core.querybuilder.QueryBuilder.*;
-
-import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
-import com.datastax.driver.core.Statement;
-import com.datastax.driver.core.UDTValue;
 
 public class ProcessInstanceTableHandler implements TableHandler {
 
@@ -32,6 +22,10 @@ public class ProcessInstanceTableHandler implements TableHandler {
   
   public final static String DROP_TABLE = "DROP TABLE IF EXISTS "+TABLE_NAME+";";
   
+  public List<String> getTableNames() {
+    return Collections.singletonList(TABLE_NAME);
+  }
+
   public void createTable(Session s) {
     s.execute(CREATE_TABLE);
   }

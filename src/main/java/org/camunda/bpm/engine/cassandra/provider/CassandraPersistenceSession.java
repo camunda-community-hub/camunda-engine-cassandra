@@ -57,6 +57,7 @@ import org.camunda.bpm.engine.impl.persistence.entity.VariableInstanceEntity;
 import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Session;
+import com.datastax.driver.core.querybuilder.QueryBuilder;
 
 public class CassandraPersistenceSession extends AbstractPersistenceSession {
   
@@ -195,10 +196,15 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
       fireEntityLoaded(result);
       return result;
     }
+    else if ("selectTableCount".equals(statement)) {
+      String tableName = ((Map<String, String>) parameter).get("tableName");
+      return cassandraSession.execute(QueryBuilder.select().countAll().from(tableName)).one().getLong(0);
+    }
     else {
       LOG.warning("unknown query "+statement);
       return null;
     }
+
   }
 
   public void lock(String statement, Object parameter) {
@@ -350,5 +356,12 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     return cassandraSession;
   }
 
-  
+  public List<String> getTableNamesPresent() {
+    List<String> tableNames = new ArrayList<String>();
+    for (TableHandler tableHandler : tableHandlers) {
+      tableNames.addAll(tableHandler.getTableNames());
+    }
+    return tableNames;
+  }
+
 }

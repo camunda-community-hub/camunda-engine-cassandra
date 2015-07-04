@@ -1,5 +1,8 @@
 package org.camunda.bpm.engine.cassandra.provider.table;
 
+import java.util.Arrays;
+import java.util.List;
+
 import com.datastax.driver.core.Session;
 
 public class ProcessDefinitionTableHandler implements TableHandler {
@@ -26,8 +29,12 @@ public class ProcessDefinitionTableHandler implements TableHandler {
   protected final static String DROP_TABLE = "DROP TABLE IF EXISTS "+TABLE_NAME;
   
   protected final static String DROP_TABLE_IDX_VERSION = "DROP TABLE IF EXISTS "+TABLE_NAME_IDX_VERSION;
-  
-  
+
+
+  public List<String> getTableNames() {
+    return Arrays.asList(TABLE_NAME, TABLE_NAME_IDX_VERSION);
+  }
+
   public void createTable(Session s) {
     s.execute(CREATE_TABLE);
     s.execute(CREATE_TABLE_IDX_VERSION);
