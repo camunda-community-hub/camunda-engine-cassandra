@@ -1,6 +1,6 @@
 package org.camunda.bpm.engine.cassandra.provider.operation;
 
-import static com.datastax.driver.core.querybuilder.QueryBuilder.insertInto;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.*;
 
 import org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSession;
 import org.camunda.bpm.engine.cassandra.provider.serializer.CassandraSerializer;
@@ -10,6 +10,7 @@ import org.camunda.bpm.engine.impl.persistence.entity.ProcessDefinitionEntity;
 import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Session;
+import com.datastax.driver.core.querybuilder.QueryBuilder;
 
 import static org.camunda.bpm.engine.cassandra.provider.table.ProcessDefinitionTableHandler.*; 
 
@@ -41,6 +42,9 @@ public class ProcessDefinitionOperations implements EntityOperations<ProcessDefi
   }
 
   public void delete(CassandraPersistenceSession session, ProcessDefinitionEntity entity, BatchStatement flush) {
+    
+    flush.add(QueryBuilder.delete().all().from(TABLE_NAME).where(eq("id", entity.getId())));
+    flush.add(QueryBuilder.delete().all().from(INSERT_IDX_VERSION).where(eq("key", entity.getKey())).and(eq("version", entity.getVersion())));
     
   }
 

@@ -43,6 +43,15 @@ public class ExecutionEntityOperations implements EntityOperations<ExecutionEnti
 
   public void delete(CassandraPersistenceSession session, ExecutionEntity entity, BatchStatement flush) {
     
+    if(entity.isProcessInstanceExecution()) {
+     flush.add(QueryBuilder.delete().all()
+          .from(ProcessInstanceTableHandler.TABLE_NAME).where(eq("id", entity.getProcessInstanceId())));
+    }
+    else {
+      flush.add(QueryBuilder.delete().mapElt("executions", entity.getId())
+          .from(ProcessInstanceTableHandler.TABLE_NAME).where(eq("id", entity.getProcessInstanceId())));
+    }
+    
   }
 
   public void update(CassandraPersistenceSession session, ExecutionEntity entity, BatchStatement flush) {

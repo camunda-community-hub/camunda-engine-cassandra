@@ -4,6 +4,7 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
 import static org.camunda.bpm.engine.cassandra.provider.table.ProcessInstanceTableHandler.TABLE_NAME;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -19,6 +20,11 @@ import com.datastax.driver.core.UDTValue;
 
 public class ProcessInstanceLoader implements CompositeEntityLoader {
 
+  public static final String NAME = "process-instance-compostite";
+  public static final String EVENT_SUBSCRIPTIONS = "event_subscriptions";
+  public static final String EXECUTIONS = "executions";
+  public static final String VARIABLES = "variables";
+  
   public LoadedCompositeEntity getEntityById(CassandraPersistenceSession session, String id) {
     LoadedCompositeEntity loadedProcessInstance = new LoadedCompositeEntity();
     
@@ -34,7 +40,7 @@ public class ProcessInstanceLoader implements CompositeEntityLoader {
     CassandraSerializer<VariableInstanceEntity> variableSerializer = session.getSerializer(VariableInstanceEntity.class);
     
     // deserialize all executions
-    Map<String, UDTValue> executionsMap = row.getMap("executions", String.class, UDTValue.class);
+    Map<String, UDTValue> executionsMap = row.getMap(EXECUTIONS, String.class, UDTValue.class);
     Map<String, ExecutionEntity> executions = new HashMap<String, ExecutionEntity>();
     for (UDTValue serializedExecution : executionsMap.values()) {
       ExecutionEntity executionEntity = executionSerializer.read(serializedExecution);
@@ -44,27 +50,39 @@ public class ProcessInstanceLoader implements CompositeEntityLoader {
       }
       
     }
-    loadedProcessInstance.put("executions", executions);
+    loadedProcessInstance.put(EXECUTIONS, executions);
     
     // deserialize all event subscription    
-    Map<String, UDTValue> eventSubscriptionsMap = row.getMap("event_subscriptions", String.class, UDTValue.class);
+    Map<String, UDTValue> eventSubscriptionsMap = row.getMap(EVENT_SUBSCRIPTIONS, String.class, UDTValue.class);
     Map<String, EventSubscriptionEntity> eventSubscriptions = new HashMap<String, EventSubscriptionEntity>();
     for (UDTValue serializedEventSubscription : eventSubscriptionsMap.values()) {
       EventSubscriptionEntity eventSubscriptionEntity = eventSubscriptionSerializer.read(serializedEventSubscription);
       eventSubscriptions.put(eventSubscriptionEntity.getId(), eventSubscriptionEntity);
     }
-    loadedProcessInstance.put("eventSubscriptions", eventSubscriptions);
+    loadedProcessInstance.put(EVENT_SUBSCRIPTIONS, eventSubscriptions);
     
     // deserialize all variables    
-    Map<String, UDTValue> variablesMap = row.getMap("variables", String.class, UDTValue.class);
+    Map<String, UDTValue> variablesMap = row.getMap(VARIABLES, String.class, UDTValue.class);
     Map<String, VariableInstanceEntity> variables = new HashMap<String, VariableInstanceEntity>();
     for (UDTValue serializedVariable : variablesMap.values()) {
       VariableInstanceEntity variableEntity = variableSerializer.read(serializedVariable);
       variables.put(variableEntity.getId(), variableEntity);
     }
-    loadedProcessInstance.put("variables", variables);
+    loadedProcessInstance.put(VARIABLES, variables);
     
+    reconstructEntityTree(loadedProcessInstance);
+
     return loadedProcessInstance;
+  }
+
+  @SuppressWarnings("unchecked")
+  protected void reconstructEntityTree(LoadedCompositeEntity compositeEntity) {
+    ExecutionEntity processInstance = (ExecutionEntity) compositeEntity.getMainEntity();
+    Map<String, ExecutionEntity> executions = (Map<String, ExecutionEntity>) compositeEntity.getEmbeddedEntities().get(EXECUTIONS);
+    Map<String, EventSubscriptionEntity> eventSubscriptions = (Map<String, EventSubscriptionEntity>) compositeEntity.getEmbeddedEntities().get(EVENT_SUBSCRIPTIONS);
+
+    ExecutionEntity.initializeExecutions(processInstance, executions);
+    ExecutionEntity.initializeEventSubscription(executions, eventSubscriptions.values());
   }
 
 }

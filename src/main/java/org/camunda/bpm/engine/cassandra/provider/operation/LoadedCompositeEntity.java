@@ -1,8 +1,6 @@
 package org.camunda.bpm.engine.cassandra.provider.operation;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.camunda.bpm.engine.impl.db.DbEntity;
@@ -11,9 +9,9 @@ public class LoadedCompositeEntity {
   
   protected DbEntity primary;
   
-  protected Map<String, Map<String, DbEntity>> embeddedEntities = new HashMap<String, Map<String,DbEntity>>();
+  protected Map<String, Map<String, ? extends DbEntity>> embeddedEntities = new HashMap<String, Map<String, ? extends DbEntity>>();
   
-  public Map<String, DbEntity> get(String name) {
+  public Map<String, ? extends DbEntity> get(String name) {
     return embeddedEntities.get(name);
   }
 
@@ -30,7 +28,7 @@ public class LoadedCompositeEntity {
     this.primary = mainEntity;
   }
   
-  public Map<String, Map<String, DbEntity>> getEmbeddedEntities() {
+  public Map<String, Map<String, ? extends DbEntity>> getEmbeddedEntities() {
     return embeddedEntities;
   }
 }

@@ -1,5 +1,8 @@
 package org.camunda.bpm.engine.cassandra.provider.serializer;
 
+import java.util.ArrayList;
+
+import org.camunda.bpm.engine.impl.persistence.entity.EventSubscriptionEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity;
 
 import com.datastax.driver.core.GettableData;
@@ -44,6 +47,7 @@ public class ExecutionEntitySerializer implements CassandraSerializer<ExecutionE
     executionEntity.setSuspensionState(data.getInt("suspension_state"));
     executionEntity.setCachedEntityState(data.getInt("cached_ent_state"));
     executionEntity.setSequenceCounter(data.getLong("sequence_counter"));
+
     return executionEntity;
   }
 

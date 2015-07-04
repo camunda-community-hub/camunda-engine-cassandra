@@ -6,11 +6,13 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.ListResourceBundle;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.camunda.bpm.engine.ProcessEngine;
+import org.camunda.bpm.engine.ProcessEngineException;
 import org.camunda.bpm.engine.cassandra.provider.operation.CompositeEntityLoader;
 import org.camunda.bpm.engine.cassandra.provider.operation.DeploymentOperations;
 import org.camunda.bpm.engine.cassandra.provider.operation.EntityOperations;
@@ -23,7 +25,10 @@ import org.camunda.bpm.engine.cassandra.provider.operation.ProcessInstanceLoader
 import org.camunda.bpm.engine.cassandra.provider.operation.ResourceOperations;
 import org.camunda.bpm.engine.cassandra.provider.operation.SingleEntityLoader;
 import org.camunda.bpm.engine.cassandra.provider.operation.VariableEntityOperations;
+import org.camunda.bpm.engine.cassandra.provider.query.SelectExecutionsByQueryCriteria;
 import org.camunda.bpm.engine.cassandra.provider.query.SelectLatestProcessDefinitionByKeyQueryHandler;
+import org.camunda.bpm.engine.cassandra.provider.query.SelectListQueryHandler;
+import org.camunda.bpm.engine.cassandra.provider.query.SelectProcessInstanceByQueryCriteria;
 import org.camunda.bpm.engine.cassandra.provider.query.SingleResultQueryHandler;
 import org.camunda.bpm.engine.cassandra.provider.serializer.CassandraSerializer;
 import org.camunda.bpm.engine.cassandra.provider.serializer.DeploymentEntitySerializer;
@@ -76,6 +81,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   protected static Map<Class<?>, SingleEntityLoader<?>> singleEntityLoaders = new HashMap<Class<?>, SingleEntityLoader<?>>();
   protected static Map<String, CompositeEntityLoader> compositeEntitiyLoader = new HashMap<String, CompositeEntityLoader>();
   protected static Map<String, SingleResultQueryHandler<?>> singleResultQueryHandlers = new HashMap<String, SingleResultQueryHandler<?>>();
+  protected static Map<String, SelectListQueryHandler<?, ?>> listResultQueryHandlers = new HashMap<String, SelectListQueryHandler<?,?>>();
   
   protected BatchStatement batch = new BatchStatement();
   
@@ -105,47 +111,28 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
 
     singleEntityLoaders.put(ProcessDefinitionEntity.class, new ProcessDefinitionLoader());
     
-    compositeEntitiyLoader.put("processInstance", new ProcessInstanceLoader());
+    compositeEntitiyLoader.put(ProcessInstanceLoader.NAME, new ProcessInstanceLoader());
     
     singleResultQueryHandlers.put("selectLatestProcessDefinitionByKey", new SelectLatestProcessDefinitionByKeyQueryHandler());
+    
+    listResultQueryHandlers.put("selectExecutionsByQueryCriteria", new SelectExecutionsByQueryCriteria());
+    listResultQueryHandlers.put("selectProcessInstanceByQueryCriteria", new SelectProcessInstanceByQueryCriteria());
   }
   
   public CassandraPersistenceSession(com.datastax.driver.core.Session session) {
     this.cassandraSession = session;
   }
 
+  @SuppressWarnings({ "unchecked", "rawtypes" })
   public List<?> selectList(String statement, Object parameter) {
-
-    if("selectExecutionsByQueryCriteria".equals(statement)) {
-      ExecutionQueryImpl executionQuery = (ExecutionQueryImpl) parameter;
-      if(executionQuery.getProcessInstanceId() == null) {
-        throw new RuntimeException("Unsupported Execution Query: process instance id needs to be provided. Got: "+executionQuery);
-      }
-      
-      CompositeEntityLoader processInstanceLoader = compositeEntitiyLoader.get("processInstance");
-      LoadedCompositeEntity loadedProcessInstance = processInstanceLoader.getEntityById(this, executionQuery.getProcessInstanceId());
-      
-      if(loadedProcessInstance == null) {
-        return null;
-      }
-      
-      processLoadedComposite(loadedProcessInstance, processInstanceLoader);
-      
-      List<EventSubscriptionQueryValue> eventSubscriptions = executionQuery.getEventSubscriptions();
-      EventSubscriptionQueryValue eventSubscriptionQueryValue = eventSubscriptions.get(0);
-      
-      for (DbEntity entity : loadedProcessInstance.get("eventSubscriptions").values()) {
-        EventSubscriptionEntity eventSubscriptionEntity = (EventSubscriptionEntity) entity;
-        if(eventSubscriptionQueryValue.getEventName().equals(eventSubscriptionEntity.getEventName())) {
-          return Arrays.asList(loadedProcessInstance.get("executions").get(eventSubscriptionEntity.getExecutionId()));
-        }
-      }
+    SelectListQueryHandler handler = listResultQueryHandlers.get(statement);
+    if(handler == null) {
+      LOG.log(Level.WARNING, "unhandled select statement '"+statement+"'");
+      return Collections.emptyList();
     }
-    
-    
-    LOG.log(Level.WARNING, "unhandled select statement '"+statement+"'");
-    return Collections.emptyList();
-    
+    else {
+      return handler.executeQuery(this, parameter);
+    }
   }
 
   @SuppressWarnings("unchecked")
@@ -153,12 +140,13 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     
     if(type.equals(ExecutionEntity.class)) {
       // special case:
-      CompositeEntityLoader processInstanceLoader = compositeEntitiyLoader.get("processInstance");
-      LoadedCompositeEntity loadedProcessInstance = processInstanceLoader.getEntityById(this, id);
-      if(loadedProcessInstance != null) {
-        return null;
+      LoadedCompositeEntity loadedCompostite = selectCompositeById(ProcessInstanceLoader.NAME, id);
+      if(loadedCompostite == null) {
+        // TODO: check execution index to see if we find it there (in case it is an execution)
       }
-      return processLoadedComposite(loadedProcessInstance, processInstanceLoader);
+      else {
+        return (T) loadedCompostite.getMainEntity();
+      }
     }
     else {
       SingleEntityLoader<?> singleEntityLoader = singleEntityLoaders.get(type);
@@ -173,12 +161,23 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     return null;
   }
 
-
-  @SuppressWarnings("unchecked")
-  protected <T extends DbEntity> T processLoadedComposite(LoadedCompositeEntity composite, CompositeEntityLoader processInstanceLoader) {
+  public LoadedCompositeEntity selectCompositeById(String compositeName, String id) {
+    CompositeEntityLoader loader = compositeEntitiyLoader.get(compositeName);
+    if(loader == null) {
+      throw new ProcessEngineException("There is no composite loader for the composite named "+ compositeName);
+    }
+    LoadedCompositeEntity composite = loader.getEntityById(this, id);
+    if(composite == null) {
+      return null;
+    }
+    processLoadedComposite(composite);
+    return composite;
+  }
+  
+  protected void processLoadedComposite(LoadedCompositeEntity composite) {
     DbEntity mainEntity = composite.getMainEntity();
     boolean isMainEntityEventFired = false;
-    for (Map<String, DbEntity> entities : composite.getEmbeddedEntities().values()) {
+    for (Map<String, ? extends DbEntity> entities : composite.getEmbeddedEntities().values()) {
       for (DbEntity entity : entities.values()) {
         fireEntityLoaded(entity);
         if(entity == mainEntity) {
@@ -189,7 +188,6 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     if(!isMainEntityEventFired) {
       fireEntityLoaded(mainEntity);
     }
-    return (T) mainEntity;
   }
 
   public Object selectOne(String statement, Object parameter) {
@@ -247,15 +245,29 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     
   }
 
+  @SuppressWarnings({ "rawtypes", "unchecked" })
   protected void deleteEntity(DbEntityOperation operation) {
-    LOG.log(Level.WARNING, "unhandled DELETE '"+operation+"'");
+    EntityOperations entityOperations = operations.get(operation.getEntityType());
+    if(entityOperations == null) {
+      LOG.log(Level.WARNING, "unhandled DELETE '"+operation+"'");
+    }
+    else {
+      entityOperations.delete(this, operation.getEntity(), batch);
+    }
   }
 
   protected void deleteBulk(DbBulkOperation operation) {
   }
 
+  @SuppressWarnings({ "rawtypes", "unchecked" })
   protected void updateEntity(DbEntityOperation operation) {
-    LOG.log(Level.WARNING, "unhandled UPDATE '"+operation+"'");
+    EntityOperations entityOperations = operations.get(operation.getEntityType());
+    if(entityOperations == null) {
+      LOG.log(Level.WARNING, "unhandled UPDATE '"+operation+"'");
+    }
+    else {
+      entityOperations.update(this, operation.getEntity(), batch);
+    }
   }
 
   protected void updateBulk(DbBulkOperation operation) {
@@ -352,6 +364,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     return udtHandlers.get(entityType);
   }
   
+  @SuppressWarnings("unchecked")
   public <T extends DbEntity> CassandraSerializer<T> getSerializer(Class<T> type) {
     return (CassandraSerializer<T>) serializers.get(type);
   }
@@ -367,5 +380,5 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     }
     return tableNames;
   }
-
+  
 }
