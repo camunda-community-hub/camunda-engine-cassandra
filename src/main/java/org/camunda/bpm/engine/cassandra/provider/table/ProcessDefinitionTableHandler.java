@@ -30,6 +30,8 @@ public class ProcessDefinitionTableHandler implements TableHandler {
   
   protected final static String DROP_TABLE_IDX_VERSION = "DROP TABLE IF EXISTS "+TABLE_NAME_IDX_VERSION;
 
+  protected final static String DEPLOYMENT_ID_IDX = "CREATE INDEX IF NOT EXISTS ON "  + TABLE_NAME + " ( deployment_id );";
+
 
   public List<String> getTableNames() {
     return Arrays.asList(TABLE_NAME, TABLE_NAME_IDX_VERSION);
@@ -38,6 +40,7 @@ public class ProcessDefinitionTableHandler implements TableHandler {
   public void createTable(Session s) {
     s.execute(CREATE_TABLE);
     s.execute(CREATE_TABLE_IDX_VERSION);
+    s.execute(DEPLOYMENT_ID_IDX);
   }
   
   public void dropTable(Session s) {

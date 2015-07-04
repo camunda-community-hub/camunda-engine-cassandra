@@ -1,12 +1,10 @@
 package org.camunda.bpm.engine.cassandra.provider;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.ListResourceBundle;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -50,9 +48,6 @@ import org.camunda.bpm.engine.cassandra.provider.type.EventSubscriptionTypeHandl
 import org.camunda.bpm.engine.cassandra.provider.type.ExecutionTypeHandler;
 import org.camunda.bpm.engine.cassandra.provider.type.UDTypeHandler;
 import org.camunda.bpm.engine.cassandra.provider.type.VariableTypeHandler;
-import org.camunda.bpm.engine.impl.EventSubscriptionQueryValue;
-import org.camunda.bpm.engine.impl.ExecutionQueryImpl;
-import org.camunda.bpm.engine.impl.SingleQueryVariableValueCondition;
 import org.camunda.bpm.engine.impl.db.AbstractPersistenceSession;
 import org.camunda.bpm.engine.impl.db.DbEntity;
 import org.camunda.bpm.engine.impl.db.entitymanager.operation.DbBulkOperation;
@@ -126,6 +121,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     
     bulkOperationHandlers.put("deleteDeployment", new BulkDeleteDeployment());
     bulkOperationHandlers.put("deleteResourcesByDeploymentId", new BulkDeleteResourcesByDeploymentId());
+    bulkOperationHandlers.put("deleteProcessDefinitionsByDeploymentId", new BulkDeleteProcessDefinitionByDeploymentId());
   }
   
   public CassandraPersistenceSession(com.datastax.driver.core.Session session) {
