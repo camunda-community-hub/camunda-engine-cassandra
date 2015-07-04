@@ -11,6 +11,8 @@ public interface TableHandler<T> {
   
   void createTable(Session s);
   
+  void dropTable(Session s);
+  
   List<? extends Statement> createInsertStatement(Session s, T entity);
 
 }

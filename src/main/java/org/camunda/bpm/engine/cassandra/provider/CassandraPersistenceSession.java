@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.camunda.bpm.engine.ProcessEngine;
+import org.camunda.bpm.engine.ProcessEngineConfiguration;
 import org.camunda.bpm.engine.impl.db.AbstractPersistenceSession;
 import org.camunda.bpm.engine.impl.db.DbEntity;
 import org.camunda.bpm.engine.impl.db.entitymanager.operation.DbBulkOperation;
@@ -137,7 +139,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   /// Schema mngt ///////////////////////////////////7
 
   protected String getDbVersion() {
-    return null;
+    return ProcessEngine.VERSION;
   }
 
   protected void dbSchemaCreateIdentity() {
@@ -173,7 +175,10 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   }
 
   protected void dbSchemaDropEngine() {
-    
+    Collection<TableHandler<?>> tableHandlers = handlers.values();
+    for (TableHandler<?> tableHandler : tableHandlers) {
+      tableHandler.dropTable(cassandraSession);
+    }
   }
 
   protected void dbSchemaDropCmmn() {

@@ -1,11 +1,9 @@
 package org.camunda.bpm.engine.cassandra.provider;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import org.camunda.bpm.engine.impl.persistence.entity.ProcessDefinitionEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.ResourceEntity;
 
 import com.datastax.driver.core.Session;
@@ -26,9 +24,14 @@ public class ResourceTableHandler implements TableHandler<ResourceEntity> {
       + "values "
       + "(?, ?, ?, ?);";
   
+  protected final static String DROP_TABLE = "DROP TABLE IF EXISTS "+TABLE_NAME;
   
   public void createTable(Session s) {
     s.execute(CREATE_TABLE_STMNT);
+  }
+  
+  public void dropTable(Session s) {
+    s.execute(DROP_TABLE);
   }
 
   public List<? extends Statement> createInsertStatement(Session s, ResourceEntity data) {

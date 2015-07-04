@@ -17,7 +17,7 @@ public class ProcessDefinitionTableHandler implements TableHandler<ProcessDefini
   protected final static String TABLE_NAME = "CAM_PROC_DEF";
   protected final static String TABLE_NAME_IDX_VERSION = "CAM_PROC_DEF_IDX_VERSION";
 
-  protected final static String CREATE_TABLE_STMNT = "CREATE TABLE "+TABLE_NAME +" "
+  protected final static String CREATE_TABLE = "CREATE TABLE "+TABLE_NAME +" "
       + "(id text, "
       + "key text, "
       + "version int, "
@@ -27,30 +27,39 @@ public class ProcessDefinitionTableHandler implements TableHandler<ProcessDefini
       + "suspension_state int, "
       + "PRIMARY KEY (id));";
   
-  protected final static String CREATE_VERSION_IDX_TABLE_STMNT = "CREATE TABLE " + TABLE_NAME_IDX_VERSION +" "
+  protected final static String CREATE_TABLE_IDX_VERSION = "CREATE TABLE " + TABLE_NAME_IDX_VERSION +" "
       + "(key text, "
       + "version int, "
       + "id text, "
       + "PRIMARY KEY (key,version)) WITH CLUSTERING ORDER BY (version DESC);";
   
-  protected final static String INSERT_STMNT = "INSERT into "+TABLE_NAME+" (id, key, version, category, name, deployment_id, suspension_state) "
+  protected final static String DROP_TABLE = "DROP TABLE IF EXISTS "+TABLE_NAME;
+  
+  protected final static String DROP_TABLE_IDX_VERSION = "DROP TABLE IF EXISTS "+TABLE_NAME_IDX_VERSION;
+  
+  protected final static String INSERT = "INSERT into "+TABLE_NAME+" (id, key, version, category, name, deployment_id, suspension_state) "
       + "values "
       + "(?, ?, ?, ?, ?, ?, ?);";
 
-  protected final static String INSERT_STMNT_VERSION_IDX = "INSERT into "+TABLE_NAME_IDX_VERSION+" (key, version, id) "
+  protected final static String INSERT_IDX_VERSION = "INSERT into "+TABLE_NAME_IDX_VERSION+" (key, version, id) "
       + "values "
       + "(?, ?, ?);";
   
   
   public void createTable(Session s) {
-    s.execute(CREATE_TABLE_STMNT);
-    s.execute(CREATE_VERSION_IDX_TABLE_STMNT);
+    s.execute(CREATE_TABLE);
+    s.execute(CREATE_TABLE_IDX_VERSION);
+  }
+  
+  public void dropTable(Session s) {
+    s.execute(DROP_TABLE_IDX_VERSION);
+    s.execute(DROP_TABLE);
   }
   
   public List<? extends Statement> createInsertStatement(Session s, ProcessDefinitionEntity procDef) {
     
     return Arrays.asList(
-        s.prepare(INSERT_STMNT).bind(
+        s.prepare(INSERT).bind(
           procDef.getId(),
           procDef.getKey(),
           procDef.getVersion(),
@@ -59,7 +68,7 @@ public class ProcessDefinitionTableHandler implements TableHandler<ProcessDefini
           procDef.getDeploymentId(),
           procDef.getSuspensionState()),
           
-        s.prepare(INSERT_STMNT_VERSION_IDX).bind(
+        s.prepare(INSERT_IDX_VERSION).bind(
             procDef.getKey(),
             procDef.getVersion(),
             procDef.getId()));
@@ -68,10 +77,10 @@ public class ProcessDefinitionTableHandler implements TableHandler<ProcessDefini
 
   public ProcessDefinitionEntity selectLatestProcessDefinitionByKey(Session s, String processDefinitionKey) {
     Row row = s.execute(select("id")
-        .from(TABLE_NAME_IDX_VERSION)
-        .where(eq("key", processDefinitionKey))
-        .limit(1))
-        .one();
+      .from(TABLE_NAME_IDX_VERSION)
+      .where(eq("key", processDefinitionKey))
+      .limit(1))
+      .one();
     if(row == null) {
       return null;
     }

@@ -22,8 +22,14 @@ public class DeploymentTableHandler implements TableHandler<DeploymentEntity> {
       + "values "
       + "(?, ?, ?);";
   
+  protected final static String DROP_TABLE = "DROP TABLE IF EXISTS "+TABLE_NAME;
+  
   public void createTable(Session s) {
     s.execute(CREATE_TABLE_STMNT);
+  }
+  
+  public void dropTable(Session s) {
+    s.execute(DROP_TABLE);
   }
 
   public List<? extends Statement> createInsertStatement(Session s, DeploymentEntity data) {
