@@ -1,5 +1,6 @@
 package org.camunda.bpm.engine.cassandra.provider;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -10,17 +11,43 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.camunda.bpm.engine.ProcessEngine;
+import org.camunda.bpm.engine.cassandra.provider.operation.CompositeEntityLoader;
+import org.camunda.bpm.engine.cassandra.provider.operation.DeploymentOperations;
+import org.camunda.bpm.engine.cassandra.provider.operation.EntityOperations;
+import org.camunda.bpm.engine.cassandra.provider.operation.EventSubscriptionOperations;
+import org.camunda.bpm.engine.cassandra.provider.operation.LoadedCompositeEntity;
+import org.camunda.bpm.engine.cassandra.provider.operation.ProcessDefinitionLoader;
+import org.camunda.bpm.engine.cassandra.provider.operation.ProcessDefinitionOperations;
+import org.camunda.bpm.engine.cassandra.provider.operation.ProcessInstanceLoader;
+import org.camunda.bpm.engine.cassandra.provider.operation.ResourceOperations;
+import org.camunda.bpm.engine.cassandra.provider.operation.SingleEntityLoader;
+import org.camunda.bpm.engine.cassandra.provider.query.SelectLatestProcessDefinitionByKeyQueryHandler;
+import org.camunda.bpm.engine.cassandra.provider.query.SingleResultQueryHandler;
+import org.camunda.bpm.engine.cassandra.provider.serializer.CassandraSerializer;
+import org.camunda.bpm.engine.cassandra.provider.serializer.DeploymentEntitySerializer;
+import org.camunda.bpm.engine.cassandra.provider.serializer.EventSubscriptionSerializer;
+import org.camunda.bpm.engine.cassandra.provider.serializer.ExecutionEntitySerializer;
+import org.camunda.bpm.engine.cassandra.provider.serializer.ProcessDefinitionSerializer;
+import org.camunda.bpm.engine.cassandra.provider.serializer.ResourceEntitySerializer;
+import org.camunda.bpm.engine.cassandra.provider.table.DeploymentTableHandler;
+import org.camunda.bpm.engine.cassandra.provider.table.ProcessDefinitionTableHandler;
+import org.camunda.bpm.engine.cassandra.provider.table.ProcessInstanceTableHandler;
+import org.camunda.bpm.engine.cassandra.provider.table.ResourceTableHandler;
+import org.camunda.bpm.engine.cassandra.provider.table.TableHandler;
+import org.camunda.bpm.engine.cassandra.provider.type.EventSubscriptionTypeHandler;
+import org.camunda.bpm.engine.cassandra.provider.type.ExecutionTypeHandler;
+import org.camunda.bpm.engine.cassandra.provider.type.UDTypeHandler;
+import org.camunda.bpm.engine.cassandra.provider.type.VariableTypeHandler;
 import org.camunda.bpm.engine.impl.EventSubscriptionQueryValue;
 import org.camunda.bpm.engine.impl.ExecutionQueryImpl;
+import org.camunda.bpm.engine.impl.SingleQueryVariableValueCondition;
 import org.camunda.bpm.engine.impl.db.AbstractPersistenceSession;
 import org.camunda.bpm.engine.impl.db.DbEntity;
 import org.camunda.bpm.engine.impl.db.entitymanager.operation.DbBulkOperation;
 import org.camunda.bpm.engine.impl.db.entitymanager.operation.DbEntityOperation;
-import org.camunda.bpm.engine.impl.history.parser.ProcessInstanceEndListener;
 import org.camunda.bpm.engine.impl.persistence.entity.DeploymentEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.EventSubscriptionEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity;
-import org.camunda.bpm.engine.impl.persistence.entity.MessageEventSubscriptionEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.ProcessDefinitionEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.ResourceEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.VariableInstanceEntity;
@@ -37,21 +64,42 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   
   protected StringBuilder batchBuilder = new StringBuilder();
 
-  protected static Map<Class<?>, TableHandler<?>> tableHandlers = new HashMap<Class<?>, TableHandler<?>>();
-  protected static Map<Class<?>, TypeHandler<?>> typeHandlers = new HashMap<Class<?>, TypeHandler<?>>();
+  protected static List<TableHandler> tableHandlers = new ArrayList<TableHandler>();
+  protected static Map<Class<?>, UDTypeHandler> udtHandlers = new HashMap<Class<?>, UDTypeHandler>();  
+  protected static Map<Class<?>, CassandraSerializer<?>> serializers = new HashMap<Class<?>, CassandraSerializer<?>>();
+  protected static Map<Class<?>, EntityOperations<?>> operations = new HashMap<Class<?>, EntityOperations<?>>();
+  protected static Map<Class<?>, SingleEntityLoader<?>> singleEntityLoaders = new HashMap<Class<?>, SingleEntityLoader<?>>();
+  protected static Map<String, CompositeEntityLoader> compositeEntitiyLoader = new HashMap<String, CompositeEntityLoader>();
+  protected static Map<String, SingleResultQueryHandler<?>> singleResultQueryHandlers = new HashMap<String, SingleResultQueryHandler<?>>();
   
   protected BatchStatement batch = new BatchStatement();
   
   static {
-    typeHandlers.put(ExecutionEntity.class, new ExecutionTypeHandler());
-    typeHandlers.put(VariableInstanceEntity.class, new VariableTypeHandler());
-    typeHandlers.put(EventSubscriptionEntity.class, new EventSubscriptionTypeHandler());
+    serializers.put(EventSubscriptionEntity.class, new EventSubscriptionSerializer());
+    serializers.put(ExecutionEntity.class, new ExecutionEntitySerializer());
+    serializers.put(ProcessDefinitionEntity.class, new ProcessDefinitionSerializer());
+    serializers.put(ResourceEntity.class, new ResourceEntitySerializer());
+    serializers.put(DeploymentEntity.class, new DeploymentEntitySerializer());
     
-    tableHandlers.put(ProcessDefinitionEntity.class, new ProcessDefinitionTableHandler());
-    tableHandlers.put(ResourceEntity.class, new ResourceTableHandler());
-    tableHandlers.put(DeploymentEntity.class, new DeploymentTableHandler());
-    tableHandlers.put(ExecutionEntity.class, new ProcessInstanceTableHandler());
-    tableHandlers.put(MessageEventSubscriptionEntity.class, new EventSubscriptionTableHandler());
+    udtHandlers.put(ExecutionEntity.class, new ExecutionTypeHandler());
+    udtHandlers.put(VariableInstanceEntity.class, new VariableTypeHandler());
+    udtHandlers.put(EventSubscriptionEntity.class, new EventSubscriptionTypeHandler());
+    
+    tableHandlers.add(new ProcessDefinitionTableHandler());
+    tableHandlers.add(new ResourceTableHandler());
+    tableHandlers.add(new DeploymentTableHandler());
+    tableHandlers.add(new ProcessInstanceTableHandler());
+    
+    operations.put(EventSubscriptionEntity.class, new EventSubscriptionOperations());
+    operations.put(ProcessDefinitionEntity.class, new ProcessDefinitionOperations());
+    operations.put(ResourceEntity.class, new ResourceOperations());
+    operations.put(DeploymentEntity.class, new DeploymentOperations());
+
+    singleEntityLoaders.put(ProcessDefinitionEntity.class, new ProcessDefinitionLoader());
+    
+    compositeEntitiyLoader.put("processInstance", new ProcessInstanceLoader());
+    
+    singleResultQueryHandlers.put("selectLatestProcessDefinitionByKey", new SelectLatestProcessDefinitionByKeyQueryHandler());
   }
   
   public CassandraPersistenceSession(com.datastax.driver.core.Session session) {
@@ -65,20 +113,23 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
       if(executionQuery.getProcessInstanceId() == null) {
         throw new RuntimeException("Unsupported Execution Query: process instance id needs to be provided. Got: "+executionQuery);
       }
-      ProcessInstanceTableHandler processInstanceTableHandler = getHandlerForType(ExecutionEntity.class);
-      CassandraProcessInstance cpi = processInstanceTableHandler.findById(cassandraSession, executionQuery.getProcessInstanceId());
       
-      if(cpi == null) {
+      CompositeEntityLoader processInstanceLoader = compositeEntitiyLoader.get("processInstance");
+      LoadedCompositeEntity loadedProcessInstance = processInstanceLoader.getEntityById(this, executionQuery.getProcessInstanceId());
+      
+      if(loadedProcessInstance == null) {
         return null;
       }
       
+      processLoadedComposite(loadedProcessInstance, processInstanceLoader);
       
       List<EventSubscriptionQueryValue> eventSubscriptions = executionQuery.getEventSubscriptions();
       EventSubscriptionQueryValue eventSubscriptionQueryValue = eventSubscriptions.get(0);
       
-      for (EventSubscriptionEntity entity : cpi.getEventSubscriptions().values()) {
-        if(eventSubscriptionQueryValue.getEventName().equals(entity.getEventName())) {
-          return Arrays.asList(cpi.getExecutions().get(entity.getExecutionId()));
+      for (DbEntity entity : loadedProcessInstance.get("eventSubscriptions").values()) {
+        EventSubscriptionEntity eventSubscriptionEntity = (EventSubscriptionEntity) entity;
+        if(eventSubscriptionQueryValue.getEventName().equals(eventSubscriptionEntity.getEventName())) {
+          return Arrays.asList(loadedProcessInstance.get("executions").get(eventSubscriptionEntity.getExecutionId()));
         }
       }
     }
@@ -90,29 +141,61 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   }
 
   @SuppressWarnings("unchecked")
-  protected <T extends TableHandler<?>> T getHandlerForType(Class<?> type) {
-    return (T) tableHandlers.get(type);
-  }
-
   public <T extends DbEntity> T selectById(Class<T> type, String id) {
     
-    if(type == ExecutionEntity.class) {
-      // first check cache
-      // first check process instance table
-      // if not found, check execution index => load process instance
-      // else return null
+    if(type.equals(ExecutionEntity.class)) {
+      // special case:
+      CompositeEntityLoader processInstanceLoader = compositeEntitiyLoader.get("processInstance");
+      LoadedCompositeEntity loadedProcessInstance = processInstanceLoader.getEntityById(this, id);
+      if(loadedProcessInstance != null) {
+        return null;
+      }
+      return processLoadedComposite(loadedProcessInstance, processInstanceLoader);
     }
+    else {
+      SingleEntityLoader<?> singleEntityLoader = singleEntityLoaders.get(type);
+      if(singleEntityLoader != null) {
+        DbEntity loadedEntity = singleEntityLoader.getEntityById(this, id);
+        fireEntityLoaded(loadedEntity);
+        return (T) loadedEntity;
+      }
+    }
+    
+    LOG.warning("Unhandled select by id "+type +" "+id);
     return null;
+  }
+
+
+  @SuppressWarnings("unchecked")
+  protected <T extends DbEntity> T processLoadedComposite(LoadedCompositeEntity composite, CompositeEntityLoader processInstanceLoader) {
+    DbEntity mainEntity = composite.getMainEntity();
+    boolean isMainEntityEventFired = false;
+    for (Map<String, DbEntity> entities : composite.getEmbeddedEntities().values()) {
+      for (DbEntity entity : entities.values()) {
+        fireEntityLoaded(entity);
+        if(entity == mainEntity) {
+          isMainEntityEventFired = true;
+        }
+      }      
+    }
+    if(!isMainEntityEventFired) {
+      fireEntityLoaded(mainEntity);
+    }
+    return (T) mainEntity;
   }
 
   public Object selectOne(String statement, Object parameter) {
     
-    if("selectLatestProcessDefinitionByKey".equals(statement)) {
-      ProcessDefinitionTableHandler handler = getHandlerForType(ProcessDefinitionEntity.class);
-      return handler.selectLatestProcessDefinitionByKey(cassandraSession, (String) parameter);
+    SingleResultQueryHandler<?> queryHandler = singleResultQueryHandlers.get(statement);
+    if(queryHandler != null) {
+      DbEntity result = queryHandler.executeQuery(this, parameter);
+      fireEntityLoaded(result);
+      return result;
     }
-    
-    return null;
+    else {
+      LOG.warning("unknown query "+statement);
+      return null;
+    }
   }
 
   public void lock(String statement, Object parameter) {
@@ -141,13 +224,12 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   
   @SuppressWarnings({ "rawtypes", "unchecked" })
   protected void insertEntity(DbEntityOperation operation) {
-    
-    TableHandler handler = tableHandlers.get(operation.getEntityType());
-    if(handler == null) {
+    EntityOperations entityOperations = operations.get(operation.getEntityType());
+    if(entityOperations == null) {
       LOG.log(Level.WARNING, "unhandled INSERT '"+operation+"'");
     }
     else {
-      batch.addAll(handler.createInsertStatement(cassandraSession, (Object) operation.getEntity()));
+      entityOperations.insert(this, operation.getEntity(), batch);
     }
     
   }
@@ -184,13 +266,12 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
 
   
   protected void dbSchemaCreateEngine() {
-    Collection<TypeHandler<?>> typeHandlers_ = typeHandlers.values();
-    for (TypeHandler<?> typeHandler : typeHandlers_) {
+    Collection<UDTypeHandler> typeHandlers_ = udtHandlers.values();
+    for (UDTypeHandler typeHandler : typeHandlers_) {
       typeHandler.createType(cassandraSession);
     }
     
-    Collection<TableHandler<?>> tableHandlers_ = tableHandlers.values();
-    for (TableHandler<?> tableHandler : tableHandlers_) {
+    for (TableHandler tableHandler : tableHandlers) {
       tableHandler.createTable(cassandraSession);
     }
   }
@@ -212,17 +293,14 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   }
 
   protected void dbSchemaDropEngine() {
-    
-    Collection<TableHandler<?>> tableHandlers_ = tableHandlers.values();
-    for (TableHandler<?> tableHandler : tableHandlers_) {
+    for (TableHandler tableHandler : tableHandlers) {
       tableHandler.dropTable(cassandraSession);
     }
     
-    Collection<TypeHandler<?>> typeHandlers_ = typeHandlers.values();
-    for (TypeHandler<?> typeHandler : typeHandlers_) {
+    Collection<UDTypeHandler> typeHandlers_ = udtHandlers.values();
+    for (UDTypeHandler typeHandler : typeHandlers_) {
       typeHandler.dropType(cassandraSession);
     }
-    
   }
 
   protected void dbSchemaDropCmmn() {
@@ -256,6 +334,18 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   public boolean isCmmnHistoryTablePresent() {
     return false;
   }
+  
+  public UDTypeHandler getTypeHander(Class<?> entityType) {
+    return udtHandlers.get(entityType);
+  }
+  
+  public <T extends DbEntity> CassandraSerializer<T> getSerializer(Class<T> type) {
+    return (CassandraSerializer<T>) serializers.get(type);
+  }
+  
+  public Session getSession() {
+    return cassandraSession;
+  }
 
-
+  
 }

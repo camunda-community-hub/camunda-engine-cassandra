@@ -11,43 +11,46 @@
  * limitations under the License.
  */
 
-package org.camunda.bpm.engine.cassandra.provider;
+package org.camunda.bpm.engine.cassandra.provider.type;
 
-import com.datastax.driver.core.Session;
 
-public class VariableTypeHandler implements TypeHandler {
+public class VariableTypeHandler extends AbstractTypeHandler {
 
   public final static String TYPE_NAME = "variable";
 
   public final static String CREATE_TYPE_STATEMENT = "CREATE TYPE IF NOT EXISTS " + TYPE_NAME + " ("
-  + "id text,"
-  + "rev int,"
-  + "type text,"
-  + "name text,"
-  + "execution_id text,"
-  + "proc_inst_id text,"
-  + "case_execution_id text,"
-  + "case_inst_id text,"
-  + "task_id text,"
-  + "bytearray_id text,"
-  + "double double,"
-  + "long bigint,"
-  + "text text,"
-  + "text2 text,"
-  + "var_scope text,"
-  + "sequence_counter int,"
-  + "is_concurrent_local boolean"
-  + ");";
+    + "id text,"
+    + "rev int,"
+    + "type text,"
+    + "name text,"
+    + "execution_id text,"
+    + "proc_inst_id text,"
+    + "case_execution_id text,"
+    + "case_inst_id text,"
+    + "task_id text,"
+    + "bytearray_id text,"
+    + "double double,"
+    + "long bigint,"
+    + "text text,"
+    + "text2 text,"
+    + "var_scope text,"
+    + "sequence_counter int,"
+    + "is_concurrent_local boolean"
+    + ");";
 
   public final static String DROP_TYPE_STATEMENT = "DROP TYPE IF EXISTS " + TYPE_NAME + ";";
 
-
-  public void createType(Session s) {
-    s.execute(CREATE_TYPE_STATEMENT);
+  public String getTypeName() {
+    return TYPE_NAME;
   }
 
-  public void dropType(Session s) {
-    s.execute(DROP_TYPE_STATEMENT);
+  protected String getCreateStatement() {
+    return CREATE_TYPE_STATEMENT;
   }
+
+  protected String getDropStatement() {
+    return DROP_TYPE_STATEMENT;
+  }
+
 
 }

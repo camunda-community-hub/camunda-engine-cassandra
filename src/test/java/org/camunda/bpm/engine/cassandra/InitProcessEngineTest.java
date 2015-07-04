@@ -23,6 +23,7 @@ public class InitProcessEngineTest {
       .setDatabaseSchemaUpdate(ProcessEngineConfiguration.DB_SCHEMA_UPDATE_CREATE_DROP)
       .setHistory(ProcessEngineConfiguration.HISTORY_NONE)
       .setMetricsEnabled(false)
+      .setAuthorizationEnabled(false)
       .buildProcessEngine();
   }
   
