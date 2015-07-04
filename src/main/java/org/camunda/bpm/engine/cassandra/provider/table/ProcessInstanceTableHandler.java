@@ -32,10 +32,6 @@ public class ProcessInstanceTableHandler implements TableHandler {
   
   public final static String DROP_TABLE = "DROP TABLE IF EXISTS "+TABLE_NAME+";";
   
-  protected final static String INSERT = "INSERT into "+TABLE_NAME+" (id, version, business_key) "
-      + "values "
-      + "(?, ?, ?);";
-  
   public void createTable(Session s) {
     s.execute(CREATE_TABLE);
   }
@@ -45,17 +41,7 @@ public class ProcessInstanceTableHandler implements TableHandler {
   }
 //
 //  public List<? extends Statement> createInsertStatement(Session s, ExecutionEntity entity) {
-//    List<Statement> statements = new ArrayList<Statement>();
-//    if(entity.isProcessInstanceExecution()) {
-//      statements.add(s.prepare(INSERT).bind(
-//          entity.getId(),
-//          entity.getRevision(),
-//          entity.getBusinessKey()));
-//        
-//    }
-//    statements.add(update(TABLE_NAME)
-//        .with(put("executions", entity.getId(), new ExecutionTypeHandler().createValue(s, entity))).where(eq("id", entity.getProcessInstanceId())));
-//    return statements;
+
 //  }
 //
 //  public CassandraProcessInstance findById(Session s, String processInstanceId) {

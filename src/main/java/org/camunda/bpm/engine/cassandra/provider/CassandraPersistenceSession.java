@@ -15,6 +15,7 @@ import org.camunda.bpm.engine.cassandra.provider.operation.CompositeEntityLoader
 import org.camunda.bpm.engine.cassandra.provider.operation.DeploymentOperations;
 import org.camunda.bpm.engine.cassandra.provider.operation.EntityOperations;
 import org.camunda.bpm.engine.cassandra.provider.operation.EventSubscriptionOperations;
+import org.camunda.bpm.engine.cassandra.provider.operation.ExecutionEntityOperations;
 import org.camunda.bpm.engine.cassandra.provider.operation.LoadedCompositeEntity;
 import org.camunda.bpm.engine.cassandra.provider.operation.ProcessDefinitionLoader;
 import org.camunda.bpm.engine.cassandra.provider.operation.ProcessDefinitionOperations;
@@ -48,6 +49,7 @@ import org.camunda.bpm.engine.impl.db.entitymanager.operation.DbEntityOperation;
 import org.camunda.bpm.engine.impl.persistence.entity.DeploymentEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.EventSubscriptionEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity;
+import org.camunda.bpm.engine.impl.persistence.entity.MessageEventSubscriptionEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.ProcessDefinitionEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.ResourceEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.VariableInstanceEntity;
@@ -90,10 +92,11 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     tableHandlers.add(new DeploymentTableHandler());
     tableHandlers.add(new ProcessInstanceTableHandler());
     
-    operations.put(EventSubscriptionEntity.class, new EventSubscriptionOperations());
+    operations.put(MessageEventSubscriptionEntity.class, new EventSubscriptionOperations());
     operations.put(ProcessDefinitionEntity.class, new ProcessDefinitionOperations());
     operations.put(ResourceEntity.class, new ResourceOperations());
     operations.put(DeploymentEntity.class, new DeploymentOperations());
+    operations.put(ExecutionEntity.class, new ExecutionEntityOperations());
 
     singleEntityLoaders.put(ProcessDefinitionEntity.class, new ProcessDefinitionLoader());
     
