@@ -51,6 +51,7 @@ public class ProcessInstanceLoader implements CompositeEntityLoader {
       EventSubscriptionEntity eventSubscriptionEntity = serializer.read(serializedEventSubscription);
       eventSubscriptions.put(eventSubscriptionEntity.getId(), eventSubscriptionEntity);
     }
+    loadedProcessInstance.put("event_subscriptions", eventSubscriptions);
     
     return loadedProcessInstance;
   }

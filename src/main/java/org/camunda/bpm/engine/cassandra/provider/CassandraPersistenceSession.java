@@ -130,7 +130,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
       List<EventSubscriptionQueryValue> eventSubscriptions = executionQuery.getEventSubscriptions();
       EventSubscriptionQueryValue eventSubscriptionQueryValue = eventSubscriptions.get(0);
       
-      for (DbEntity entity : loadedProcessInstance.get("eventSubscriptions").values()) {
+      for (DbEntity entity : loadedProcessInstance.get("event_subscriptions").values()) {
         EventSubscriptionEntity eventSubscriptionEntity = (EventSubscriptionEntity) entity;
         if(eventSubscriptionQueryValue.getEventName().equals(eventSubscriptionEntity.getEventName())) {
           return Arrays.asList(loadedProcessInstance.get("executions").get(eventSubscriptionEntity.getExecutionId()));
