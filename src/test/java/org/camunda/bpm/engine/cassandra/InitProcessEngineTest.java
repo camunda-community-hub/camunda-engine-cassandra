@@ -70,7 +70,7 @@ public class InitProcessEngineTest {
     ProcessInstance processInstance = processEngine.getRuntimeService()
      .startProcessInstanceByKey("testProcess", vars);
     
-    //processEngine.getRuntimeService().getVariable(processInstance.getId(), "testVar");
+    processEngine.getRuntimeService().getVariable(processInstance.getId(), "testVar");
     
     processEngine.getRuntimeService()
       .createMessageCorrelation("orderCancelled")
