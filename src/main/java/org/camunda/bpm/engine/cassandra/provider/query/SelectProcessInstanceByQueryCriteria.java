@@ -26,7 +26,7 @@ public class SelectProcessInstanceByQueryCriteria implements SelectListQueryHand
       return Collections.emptyList();
     }
     else {
-      return (List) Arrays.asList(composite.getMainEntity());
+      return (List) Arrays.asList(composite.getPrimaryEntity());
     }
   }
 

@@ -4,10 +4,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -89,8 +87,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   protected static Map<String, BulkOperationHandler> bulkOperationHandlers = new HashMap<String, BulkOperationHandler>();
   
   protected BatchStatement varietyBatch = new BatchStatement();
-  
-  protected Map<String, ProcessInstanceBatch> batchesWithLocking = new HashMap<String, ProcessInstanceBatch>();
+  protected Map<String, LockedBatch<?>> lockedBatches = new HashMap<String, LockedBatch<?>>();
   
   
   static {
@@ -154,14 +151,14 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   @SuppressWarnings("unchecked")
   public <T extends DbEntity> T selectById(Class<T> type, String id) {
     
-    if(type.equals(ExecutionEntity.class)) {
+    if(type.equals(DbEntity.class)) {
       // special case:
       LoadedCompositeEntity loadedCompostite = selectCompositeById(ProcessInstanceLoader.NAME, id);
       if(loadedCompostite == null) {
         // TODO: check execution index to see if we find it there (in case it is an execution)
       }
       else {
-        return (T) loadedCompostite.getMainEntity();
+        return (T) loadedCompostite.getPrimaryEntity();
       }
     }
     else {
@@ -191,7 +188,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   }
   
   protected void processLoadedComposite(LoadedCompositeEntity composite) {
-    DbEntity mainEntity = composite.getMainEntity();
+    DbEntity mainEntity = composite.getPrimaryEntity();
     boolean isMainEntityEventFired = false;
     for (Map<String, ? extends DbEntity> entities : composite.getEmbeddedEntities().values()) {
       for (DbEntity entity : entities.values()) {
@@ -230,7 +227,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   }
 
   public void commit() {
-    for (ProcessInstanceBatch batchWithLocking : batchesWithLocking.values()) {
+    for (LockedBatch<?> batchWithLocking : lockedBatches.values()) {
       flushBatch(batchWithLocking.getBatch());
     }
     flushBatch(varietyBatch);
@@ -416,18 +413,18 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     return tableNames;
   }
   
-  public void addLoadedProcessInstance(ExecutionEntity e) {
-    batchesWithLocking.put(e.getId(), new ProcessInstanceBatch(e));
+  public void addLockedBatch(String id, LockedBatch<?> batch) {
+    lockedBatches.put(id, batch);
   }
   
   public void addStatement(Statement statement, String objectId) {
-    ProcessInstanceBatch processInstanceOptimisticLockingHandler = batchesWithLocking.get(objectId);
-    processInstanceOptimisticLockingHandler.addStatement(statement);
+    LockedBatch<?> batch = lockedBatches.get(objectId);
+    batch.addStatement(statement);
   }
   
-  public void deleteBatchObject(String objectId) {
-    ProcessInstanceBatch processInstanceOptimisticLockingHandler = batchesWithLocking.get(objectId);
-    processInstanceOptimisticLockingHandler.setIsDeleted();
+  public void batchShouldNotLock(String objectId) {
+    LockedBatch<?> batch = lockedBatches.get(objectId);
+    batch.setShouldNotLock();
   }
   
   public void addStatement(Statement statement) {

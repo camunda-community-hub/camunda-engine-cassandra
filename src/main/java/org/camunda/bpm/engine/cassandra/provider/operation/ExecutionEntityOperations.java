@@ -7,6 +7,7 @@ import org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSession;
 import org.camunda.bpm.engine.cassandra.provider.serializer.CassandraSerializer;
 import org.camunda.bpm.engine.cassandra.provider.table.ProcessInstanceTableHandler;
 import org.camunda.bpm.engine.cassandra.provider.type.UDTypeHandler;
+import org.camunda.bpm.engine.impl.db.DbEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity;
 
 import com.datastax.driver.core.Session;
@@ -42,7 +43,7 @@ public class ExecutionEntityOperations implements EntityOperationHandler<Executi
           .from(ProcessInstanceTableHandler.TABLE_NAME).where(eq("id", entity.getProcessInstanceId()))
           .onlyIf(eq("version", entity.getRevision())),
           entity.getProcessInstanceId());
-     session.deleteBatchObject(entity.getProcessInstanceId());
+     session.batchShouldNotLock(entity.getProcessInstanceId());
     }
     else {
       session.addStatement(QueryBuilder.delete().mapElt("executions", entity.getId())

@@ -20,7 +20,7 @@ public class LoadedCompositeEntity {
     embeddedEntities.put(name, entities);
   }
   
-  public DbEntity getMainEntity() {
+  public DbEntity getPrimaryEntity() {
     return primary;
   }
   

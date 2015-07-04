@@ -4,11 +4,11 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
 import static org.camunda.bpm.engine.cassandra.provider.table.ProcessInstanceTableHandler.TABLE_NAME;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSession;
+import org.camunda.bpm.engine.cassandra.provider.ProcessInstanceBatch;
 import org.camunda.bpm.engine.cassandra.provider.serializer.CassandraSerializer;
 import org.camunda.bpm.engine.impl.persistence.entity.EventSubscriptionEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity;
@@ -75,18 +75,19 @@ public class ProcessInstanceLoader implements CompositeEntityLoader {
     
     reconstructEntityTree(loadedProcessInstance);
 
-    ExecutionEntity processInstance= (ExecutionEntity) loadedProcessInstance.getMainEntity();
+    ExecutionEntity processInstance= (ExecutionEntity) loadedProcessInstance.getPrimaryEntity();
     processInstance.setRevision(version);
     processInstance.setBusinessKey(businessKey);
     
-    session.addLoadedProcessInstance((ExecutionEntity) loadedProcessInstance.getMainEntity());
+    ProcessInstanceBatch batch = new ProcessInstanceBatch((ExecutionEntity) loadedProcessInstance.getPrimaryEntity());
+    session.addLockedBatch(loadedProcessInstance.getPrimaryEntity().getId(), batch);
 
     return loadedProcessInstance;
   }
 
   @SuppressWarnings("unchecked")
   protected void reconstructEntityTree(LoadedCompositeEntity compositeEntity) {
-    ExecutionEntity processInstance = (ExecutionEntity) compositeEntity.getMainEntity();
+    ExecutionEntity processInstance = (ExecutionEntity) compositeEntity.getPrimaryEntity();
     Map<String, ExecutionEntity> executions = (Map<String, ExecutionEntity>) compositeEntity.getEmbeddedEntities().get(EXECUTIONS);
     Map<String, EventSubscriptionEntity> eventSubscriptions = (Map<String, EventSubscriptionEntity>) compositeEntity.getEmbeddedEntities().get(EVENT_SUBSCRIPTIONS);
 
