@@ -13,6 +13,7 @@ Put into another file if too big._
 
 ## Resources
 
+* [Gougle Group / Mailing List](https://groups.google.com/forum/?fromgroups&hl=en#!forum/camunda-bpm-dev)
 * [Issue Tracker](link-to-issue-tracker) _use github unless you got your own_
 * [Roadmap](link-to-issue-tracker-filter) _if in terms of tagged issues_
 * [Changelog](link-to-changelog) _lets users track progress on what has been happening_
