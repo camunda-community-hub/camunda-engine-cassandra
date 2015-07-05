@@ -7,11 +7,8 @@ Cassandra Persistence for Camunda (Community Extension)
 ## Resources
 
 * [Gougle Group / Mailing List](https://groups.google.com/forum/?fromgroups&hl=en#!forum/camunda-bpm-dev)
-* [Issue Tracker](link-to-issue-tracker) _use github unless you got your own_
-* [Roadmap](link-to-issue-tracker-filter) _if in terms of tagged issues_
-* [Changelog](link-to-changelog) _lets users track progress on what has been happening_
-* [Download](link-to-downloadable-archive) _if downloadable_
-* [Contributing](link-to-contribute-guide) _if desired, best to put it into a CONTRIBUTE.md file_
+* [Issue Tracker](https://github.com/camunda/camunda-engine-cassandra/issues)
+* [Roadmap](https://github.com/camunda/camunda-engine-cassandra/milestones)
 
 ## Roadmap
 
