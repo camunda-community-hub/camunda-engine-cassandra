@@ -25,7 +25,15 @@ Persistence for core Runtime Data Structures and the Repository:
 
 [Have a Look at some Unit Tests](https://github.com/camunda/camunda-engine-cassandra/blob/master/src/test/java/org/camunda/bpm/engine/cassandra/ExampleTest.java)
 
-#### Running the process engine Unit Test Suite
+### Goal for the first Release
+
+* "core engine" works, which excludes
+    * BPMN User Tasks
+    * History
+    * Job Executor
+    * Complex Queries in General
+    
+### Running the Process Engine Unit Test Suite
 
 It is possible to run the camunda process engine unit test suite against the Cassandra Persistence Layer:
 
@@ -35,14 +43,6 @@ mvn clean test -P engine-tests
 
 This way you can check the compatibility.
 
-### Goal for the first Release
-
-* "core engine" works, which excludes
-    * BPMN User Tasks
-    * History
-    * Job Executor
-    * Complex Queries in General
-    
 ## Maintainer
 
 * Natalia Levine
