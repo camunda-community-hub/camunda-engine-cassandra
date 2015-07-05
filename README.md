@@ -26,7 +26,7 @@ This way you can check the compatibility.
 
 ## Maintainer
 
-* Natalia Levine
+* Natalia Levine (ContextSpace)
 
 ## License
 
