@@ -2,14 +2,7 @@
 
 Cassandra Persistence for Camunda (Community Extension)
 
-_Short description of project_
-
-![Screenshot or code snippet](http://placehold.it/550x350&text=Image%20or%20code%20snippet%20if%20applicable)
-
 ## Get started
-
-_A quick description how your project can be used, including where the relevant resources can be obtained from.
-Put into another file if too big._
 
 ## Resources
 
@@ -20,23 +13,39 @@ Put into another file if too big._
 * [Download](link-to-downloadable-archive) _if downloadable_
 * [Contributing](link-to-contribute-guide) _if desired, best to put it into a CONTRIBUTE.md file_
 
-
 ## Roadmap
 
-_specify a short list of things that yet need to be done (unless you organize it elsewhere)_
+### Current State
 
-**todo**
-- add feature B
-- integrate with technology X
+Persistence for core Runtime Data Structures and the Repository: 
+* Executions
+* Variables
+* Event Subscriptions
+* Process Definitions, Resources, Deployments
 
-**done**
-- add feature A
+[Have a Look at some Unit Tests](https://github.com/camunda/camunda-engine-cassandra/blob/master/src/test/java/org/camunda/bpm/engine/cassandra/ExampleTest.java)
 
+#### Running the process engine Unit Test Suite
 
+It is possible to run the camunda process engine unit test suite against the Cassandra Persistence Layer:
+
+```bash
+mvn clean test -P engine-tests
+```
+
+This way you can check the compatibility.
+
+### Goal for the first Release
+
+* "core engine" works, which excludes
+    * BPMN User Tasks
+    * History
+    * Job Executor
+    * Complex Queries in General
+    
 ## Maintainer
 
-_Your Name with link to Github profile or email_
-
+* Natalia Levine
 
 ## License
 
