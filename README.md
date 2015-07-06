@@ -31,5 +31,3 @@ This way you can check the compatibility.
 ## License
 
 Apache License, Version 2.0
-
-_(Choose among Apache License, Version 2.0 or The MIT License. Update file LICENSE as well.)_
