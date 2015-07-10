@@ -10,7 +10,7 @@ public class ProcessDefinitionTableHandler implements TableHandler {
   public final static String TABLE_NAME = "CAM_PROC_DEF";
   public final static String TABLE_NAME_IDX_VERSION = "CAM_PROC_DEF_IDX_VERSION";
 
-  protected final static String CREATE_TABLE = "CREATE TABLE "+TABLE_NAME +" "
+  protected final static String CREATE_TABLE = "CREATE TABLE IF NOT EXISTS "+TABLE_NAME +" "
       + "(id text, "
       + "key text, "
       + "version int, "
@@ -20,7 +20,7 @@ public class ProcessDefinitionTableHandler implements TableHandler {
       + "suspension_state int, "
       + "PRIMARY KEY (id));";
   
-  protected final static String CREATE_TABLE_IDX_VERSION = "CREATE TABLE " + TABLE_NAME_IDX_VERSION +" "
+  protected final static String CREATE_TABLE_IDX_VERSION = "CREATE TABLE IF NOT EXISTS " + TABLE_NAME_IDX_VERSION +" "
       + "(key text, "
       + "version int, "
       + "id text, "

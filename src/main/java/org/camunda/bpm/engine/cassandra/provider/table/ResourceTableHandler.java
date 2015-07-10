@@ -9,7 +9,7 @@ public class ResourceTableHandler implements TableHandler {
   
   public final static String TABLE_NAME = "CAM_RESOURCE";
 
-  protected final static String CREATE_TABLE_STMNT = "CREATE TABLE "+TABLE_NAME +" "
+  protected final static String CREATE_TABLE_STMNT = "CREATE TABLE IF NOT EXISTS "+TABLE_NAME +" "
       + "(id text, "
       + "name text, "
       + "deployment_id text,"
@@ -18,7 +18,7 @@ public class ResourceTableHandler implements TableHandler {
   
   protected final static String DROP_TABLE = "DROP TABLE IF EXISTS "+TABLE_NAME;
   
-  protected final static String DEPLOYMENT_ID_IDX = "CREATE INDEX deployment_idx ON "+TABLE_NAME+" ( deployment_id );";
+  protected final static String DEPLOYMENT_ID_IDX = "CREATE INDEX IF NOT EXISTS deployment_idx ON "+TABLE_NAME+" ( deployment_id );";
 
   public List<String> getTableNames() {
     return Collections.singletonList(TABLE_NAME);

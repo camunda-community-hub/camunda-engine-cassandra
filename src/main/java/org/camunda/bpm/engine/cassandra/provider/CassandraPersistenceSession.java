@@ -151,7 +151,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   @SuppressWarnings("unchecked")
   public <T extends DbEntity> T selectById(Class<T> type, String id) {
     
-    if(type.equals(DbEntity.class)) {
+    if(type.equals(ExecutionEntity.class)) {
       // special case:
       LoadedCompositeEntity loadedCompostite = selectCompositeById(ProcessInstanceLoader.NAME, id);
       if(loadedCompostite == null) {

@@ -8,7 +8,7 @@ public class DeploymentTableHandler extends AbstractTableHandler {
   
   public final static String TABLE_NAME = "CAM_DEPLOYMENT";
 
-  protected final static String CREATE_TABLE_STMNT = "CREATE TABLE "+TABLE_NAME +" "
+  protected final static String CREATE_TABLE_STMNT = "CREATE TABLE IF NOT EXISTS "+TABLE_NAME +" "
       + "(id text, "
       + "name text, "
       + "deploy_time bigint, "
