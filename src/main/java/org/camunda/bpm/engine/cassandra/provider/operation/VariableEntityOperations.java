@@ -14,7 +14,7 @@ import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.UDTValue;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 
-public class VariableEntityOperations implements EntityOperationHandler<VariableInstanceEntity>{
+public class VariableEntityOperations implements ProcessSubentityOperationsHandler<VariableInstanceEntity>{
 
   public void insert(CassandraPersistenceSession session, VariableInstanceEntity entity) {
     session.addStatement(createUpdateStatement(session, entity));
@@ -43,5 +43,9 @@ public class VariableEntityOperations implements EntityOperationHandler<Variable
       .where(eq("id", entity.getProcessInstanceId()));
   }
 
-
+  @Override
+  public VariableInstanceEntity getById(CassandraPersistenceSession session, String id) {
+    // TODO Auto-generated method stub
+    return null;
+  }
 }

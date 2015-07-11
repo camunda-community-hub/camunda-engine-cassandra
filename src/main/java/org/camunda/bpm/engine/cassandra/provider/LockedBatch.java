@@ -10,6 +10,7 @@ public abstract class LockedBatch<T extends DbEntity> {
   protected T entity;
   
   protected BatchStatement batch = new BatchStatement();
+  protected BatchStatement indexBatch = null;
 
   protected boolean shouldNotLock = false;
   
@@ -34,8 +35,19 @@ public abstract class LockedBatch<T extends DbEntity> {
     batch.add(statement);
   }
   
+  public void addIndexStatement(Statement statement) {
+    if(indexBatch==null){
+      indexBatch=new BatchStatement();
+    }
+    indexBatch.add(statement);
+  }
+
   public void setShouldNotLock() {
     this.shouldNotLock = true;
+  }
+
+  public BatchStatement getIndexBatch() {
+    return indexBatch;
   }
   
 }

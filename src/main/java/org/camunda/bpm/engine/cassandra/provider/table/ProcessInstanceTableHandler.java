@@ -1,6 +1,6 @@
 package org.camunda.bpm.engine.cassandra.provider.table;
 
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 
 import org.camunda.bpm.engine.cassandra.provider.type.EventSubscriptionTypeHandler;
@@ -12,6 +12,7 @@ import com.datastax.driver.core.Session;
 public class ProcessInstanceTableHandler implements TableHandler {
 
   public final static String TABLE_NAME = "CAM_PROC_INST";
+  public final static String INDEX_TABLE_NAME = "CAM_PROC_INST_IDX";
 
   protected final static String CREATE_TABLE = "CREATE TABLE IF NOT EXISTS "+TABLE_NAME +" "
       + "(id text, "
@@ -22,49 +23,26 @@ public class ProcessInstanceTableHandler implements TableHandler {
       + "variables map <text, frozen <"+VariableTypeHandler.TYPE_NAME+">>,"
       + "PRIMARY KEY (id));";
   
-  public final static String DROP_TABLE = "DROP TABLE IF EXISTS "+TABLE_NAME+";";
+  protected final static String CREATE_INDEX_TABLE = "CREATE TABLE IF NOT EXISTS "+INDEX_TABLE_NAME +" "
+      + "(idx_name text, "
+      + "idx_value text, "
+      + "id text, "
+      + "PRIMARY KEY ((idx_name, idx_value)));";
   
+  public final static String DROP_TABLE = "DROP TABLE IF EXISTS "+TABLE_NAME+";";
+  public final static String DROP_INDEX_TABLE = "DROP TABLE IF EXISTS "+INDEX_TABLE_NAME+";";
+    
   public List<String> getTableNames() {
-    return Collections.singletonList(TABLE_NAME);
+    return Arrays.asList(TABLE_NAME, INDEX_TABLE_NAME);
   }
 
   public void createTable(Session s) {
     s.execute(CREATE_TABLE);
+    s.execute(CREATE_INDEX_TABLE);
   }
 
   public void dropTable(Session s) {
     s.execute(DROP_TABLE);
+    s.execute(DROP_INDEX_TABLE);
   }
-//
-//  public List<? extends Statement> createInsertStatement(Session s, ExecutionEntity entity) {
-
-//  }
-//
-//  public CassandraProcessInstance findById(Session s, String processInstanceId) {
-//    Row row = s.execute(select().all().from(TABLE_NAME).where(eq("id", processInstanceId))).one();
-//    if(row == null) {
-//      return null;
-//    }
-//    
-//    ExecutionTypeHandler executionTypeHandler = new ExecutionTypeHandler();
-//    EventSubscriptionTypeHandler eventSubscriptionTypeHandler = new EventSubscriptionTypeHandler();
-//    
-//    CassandraProcessInstance cassandraProcessInstance = new CassandraProcessInstance();
-//    
-//    // deserialize all executions
-//    Map<String, UDTValue> executionsMap = row.getMap("executions", String.class, UDTValue.class);
-//    for (UDTValue serializedExecution : executionsMap.values()) {
-//      ExecutionEntity executionEntity = executionTypeHandler.deserializeValue(serializedExecution);
-//      cassandraProcessInstance.getExecutions().put(executionEntity.getId(), executionEntity);
-//    }
-//    
-//    // deserialize all event subscription    
-//    Map<String, UDTValue> eventSubscriptionsMap = row.getMap("event_subscriptions", String.class, UDTValue.class);
-//    for (UDTValue serializedEventSubscription : eventSubscriptionsMap.values()) {
-//      EventSubscriptionEntity eventSubscriptionEntity = eventSubscriptionTypeHandler.deserializeValue(serializedEventSubscription);
-//      cassandraProcessInstance.getEventSubscriptions().put(eventSubscriptionEntity.getId(), eventSubscriptionEntity);
-//    }
-//    return cassandraProcessInstance;
-//  }
-  
 }

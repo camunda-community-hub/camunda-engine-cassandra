@@ -1,14 +1,9 @@
 package org.camunda.bpm.engine.cassandra;
 
-import static org.junit.Assert.*;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.camunda.bpm.engine.ProcessEngine;
-import org.camunda.bpm.engine.ProcessEngineConfiguration;
-import org.camunda.bpm.engine.cassandra.cfg.CassandraProcessEngineConfiguration;
 import org.camunda.bpm.engine.impl.test.PluggableProcessEngineTestCase;
 import org.camunda.bpm.engine.repository.Deployment;
 import org.camunda.bpm.engine.runtime.Execution;
@@ -17,8 +12,6 @@ import org.camunda.bpm.model.bpmn.Bpmn;
 import org.camunda.bpm.model.bpmn.BpmnModelInstance;
 import org.camunda.bpm.model.bpmn.instance.Message;
 import org.camunda.bpm.model.bpmn.instance.Process;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class InitProcessEngineTest extends PluggableProcessEngineTestCase{
@@ -65,7 +58,8 @@ public class InitProcessEngineTest extends PluggableProcessEngineTestCase{
 
     String varValue2 = (String) processEngine.getRuntimeService().getVariable(processInstance.getId(), "testVar2");
     assertEquals("testVarValue2",varValue2);
-   /* List<Execution> executions=processEngine.getRuntimeService()
+    
+    List<Execution> executions=processEngine.getRuntimeService()
     		.createExecutionQuery()
     		.processInstanceId(processInstance.getId())
     		.list();
@@ -74,13 +68,13 @@ public class InitProcessEngineTest extends PluggableProcessEngineTestCase{
     for(Execution execution:executions){
     	if(!execution.getId().equals(processInstance.getId())){
     		executionId = execution.getId();
-    	    processEngine.getRuntimeService().setVariableLocal(executionId, "testVarLocal", "testVarLocalValue"); 
-    	    break;
+    		processEngine.getRuntimeService().setVariableLocal(executionId, "testVarLocal", "testVarLocalValue"); 
+    	  break;
     	}
     }
     assertNotNull(executionId);
     String varValueLocal = (String) processEngine.getRuntimeService().getVariable(executionId, "testVarLocal");
-    assertEquals("testVarLocalValue",varValueLocal);*/
+    assertEquals("testVarLocalValue",varValueLocal);
     
     processEngine.getRuntimeService()
       .createMessageCorrelation("orderCancelled")
@@ -88,9 +82,9 @@ public class InitProcessEngineTest extends PluggableProcessEngineTestCase{
       .correlate();
 
     processEngine.getRuntimeService()
-    .createMessageCorrelation("orderCompleted")
-    .processInstanceId(processInstance.getId())
-    .correlate();
+      .createMessageCorrelation("orderCompleted")
+      .processInstanceId(processInstance.getId())
+      .correlate();
 
     assertProcessEnded(processInstance.getId());
     

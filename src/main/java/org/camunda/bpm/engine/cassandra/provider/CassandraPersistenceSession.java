@@ -25,6 +25,7 @@ import org.camunda.bpm.engine.cassandra.provider.operation.LoadedCompositeEntity
 import org.camunda.bpm.engine.cassandra.provider.operation.ProcessDefinitionLoader;
 import org.camunda.bpm.engine.cassandra.provider.operation.ProcessDefinitionOperations;
 import org.camunda.bpm.engine.cassandra.provider.operation.ProcessInstanceLoader;
+import org.camunda.bpm.engine.cassandra.provider.operation.ProcessSubentityOperationsHandler;
 import org.camunda.bpm.engine.cassandra.provider.operation.ResourceOperations;
 import org.camunda.bpm.engine.cassandra.provider.operation.SingleEntityLoader;
 import org.camunda.bpm.engine.cassandra.provider.operation.VariableEntityOperations;
@@ -85,6 +86,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   protected static Map<String, SingleResultQueryHandler<?>> singleResultQueryHandlers = new HashMap<String, SingleResultQueryHandler<?>>();
   protected static Map<String, SelectListQueryHandler<?, ?>> listResultQueryHandlers = new HashMap<String, SelectListQueryHandler<?,?>>();
   protected static Map<String, BulkOperationHandler> bulkOperationHandlers = new HashMap<String, BulkOperationHandler>();
+  //protected static Map<String, IndexQueryHandler> indexQueryHandlers = new HashMap<String, IndexQueryHandler>();
   
   protected BatchStatement varietyBatch = new BatchStatement();
   protected Map<String, LockedBatch<?>> lockedBatches = new HashMap<String, LockedBatch<?>>();
@@ -120,7 +122,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     compositeEntitiyLoader.put(ProcessInstanceLoader.NAME, new ProcessInstanceLoader());
     
     singleResultQueryHandlers.put("selectLatestProcessDefinitionByKey", new SelectLatestProcessDefinitionByKeyQueryHandler());
-    
+
     listResultQueryHandlers.put("selectExecutionsByQueryCriteria", new SelectExecutionsByQueryCriteria());
     listResultQueryHandlers.put("selectProcessInstanceByQueryCriteria", new SelectProcessInstanceByQueryCriteria());
 
@@ -154,12 +156,14 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     if(type.equals(ExecutionEntity.class)) {
       // special case:
       LoadedCompositeEntity loadedCompostite = selectCompositeById(ProcessInstanceLoader.NAME, id);
-      if(loadedCompostite == null) {
-        // TODO: check execution index to see if we find it there (in case it is an execution)
-      }
-      else {
+      if(loadedCompostite != null) {
         return (T) loadedCompostite.getPrimaryEntity();
       }
+    }
+    
+    EntityOperationHandler<?> entityOperations = operations.get(type);
+    if(entityOperations instanceof ProcessSubentityOperationsHandler){
+      return ((ProcessSubentityOperationsHandler<T>) entityOperations).getById(this, id);
     }
     else {
       SingleEntityLoader<?> singleEntityLoader = singleEntityLoaders.get(type);
@@ -229,11 +233,15 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   public void commit() {
     for (LockedBatch<?> batchWithLocking : lockedBatches.values()) {
       flushBatch(batchWithLocking.getBatch());
+      flushBatch(batchWithLocking.getIndexBatch());
     }
     flushBatch(varietyBatch);
   }
 
   private void flushBatch(BatchStatement batch) {
+    if(batch==null){
+      return;
+    }
     List<Row> rows = cassandraSession.execute(batch).all();
     for (Row row : rows) {
       if(!row.getBool("[applied]")) {
@@ -422,6 +430,11 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     batch.addStatement(statement);
   }
   
+  public void addIndexStatement(Statement statement, String objectId) {
+    LockedBatch<?> batch = lockedBatches.get(objectId);
+    batch.addIndexStatement(statement);
+  }
+  
   public void batchShouldNotLock(String objectId) {
     LockedBatch<?> batch = lockedBatches.get(objectId);
     batch.setShouldNotLock();
@@ -430,5 +443,4 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   public void addStatement(Statement statement) {
     varietyBatch.add(statement);
   }
-  
 }

@@ -4,6 +4,7 @@ import static org.camunda.bpm.engine.cassandra.provider.operation.ProcessInstanc
 import static org.camunda.bpm.engine.cassandra.provider.operation.ProcessInstanceLoader.EXECUTIONS;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -22,10 +23,12 @@ public class SelectExecutionsByQueryCriteria implements SelectListQueryHandler<E
 
   public List<ExecutionEntity> executeQuery(CassandraPersistenceSession session, ExecutionQueryImpl executionQuery) {
     
-    if(executionQuery.getProcessInstanceId() == null) {
-      throw new RuntimeException("Unsupported Execution Query: process instance id needs to be provided.");
+    if(executionQuery.getProcessInstanceId() == null && executionQuery.getExecutionId()==null) {
+      throw new RuntimeException("Unsupported Execution Query: process instance id or execution id needs to be provided.");
     }
-    
+    if(executionQuery.getExecutionId()!=null){
+      return Arrays.asList(session.selectById(ExecutionEntity.class, executionQuery.getExecutionId()));
+    }
     LoadedCompositeEntity loadedProcessInstance = session.selectCompositeById(ProcessInstanceLoader.NAME, executionQuery.getProcessInstanceId());
     
     if(loadedProcessInstance == null) {

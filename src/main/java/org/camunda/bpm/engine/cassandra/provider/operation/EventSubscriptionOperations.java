@@ -14,7 +14,7 @@ import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.UDTValue;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 
-public class EventSubscriptionOperations implements EntityOperationHandler<EventSubscriptionEntity> {
+public class EventSubscriptionOperations implements ProcessSubentityOperationsHandler<EventSubscriptionEntity> {
   
   public void insert(CassandraPersistenceSession session, EventSubscriptionEntity entity) {
     session.addStatement(createUpdateStatement(session, entity));
@@ -42,6 +42,15 @@ public class EventSubscriptionOperations implements EntityOperationHandler<Event
     return QueryBuilder.update(ProcessInstanceTableHandler.TABLE_NAME)
         .with(put("event_subscriptions", entity.getId(), value))
         .where(eq("id", entity.getProcessInstanceId()));
+  }
+
+  /* (non-Javadoc)
+   * @see org.camunda.bpm.engine.cassandra.provider.operation.ProcessSubentityOperationsHandler#getById(org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSession, java.lang.String)
+   */
+  @Override
+  public EventSubscriptionEntity getById(CassandraPersistenceSession session, String id) {
+    // TODO Auto-generated method stub
+    return null;
   }
   
 }
