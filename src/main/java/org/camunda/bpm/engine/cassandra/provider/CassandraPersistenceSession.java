@@ -12,6 +12,7 @@ import java.util.logging.Logger;
 import org.camunda.bpm.engine.OptimisticLockingException;
 import org.camunda.bpm.engine.ProcessEngine;
 import org.camunda.bpm.engine.ProcessEngineException;
+import org.camunda.bpm.engine.cassandra.cfg.CassandraProcessEngineConfiguration;
 import org.camunda.bpm.engine.cassandra.provider.operation.BulkDeleteDeployment;
 import org.camunda.bpm.engine.cassandra.provider.operation.BulkDeleteResourcesByDeploymentId;
 import org.camunda.bpm.engine.cassandra.provider.operation.BulkOperationHandler;
@@ -50,6 +51,7 @@ import org.camunda.bpm.engine.cassandra.provider.type.EventSubscriptionTypeHandl
 import org.camunda.bpm.engine.cassandra.provider.type.ExecutionTypeHandler;
 import org.camunda.bpm.engine.cassandra.provider.type.UDTypeHandler;
 import org.camunda.bpm.engine.cassandra.provider.type.VariableTypeHandler;
+import org.camunda.bpm.engine.impl.context.Context;
 import org.camunda.bpm.engine.impl.db.AbstractPersistenceSession;
 import org.camunda.bpm.engine.impl.db.DbEntity;
 import org.camunda.bpm.engine.impl.db.entitymanager.operation.DbBulkOperation;
@@ -231,17 +233,21 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   }
 
   public void commit() {
+    //apply all batches in the transaction with the same timestamp 
+    long timestamp = ((CassandraProcessEngineConfiguration)Context.getProcessEngineConfiguration())
+        .getCluster().getConfiguration().getPolicies().getTimestampGenerator().next();
     for (LockedBatch<?> batchWithLocking : lockedBatches.values()) {
-      flushBatch(batchWithLocking.getBatch());
-      flushBatch(batchWithLocking.getIndexBatch());
+      flushBatch(batchWithLocking.getBatch(), timestamp);
+      flushBatch(batchWithLocking.getIndexBatch(), timestamp);
     }
-    flushBatch(varietyBatch);
+    flushBatch(varietyBatch, timestamp);
   }
 
-  private void flushBatch(BatchStatement batch) {
+  private void flushBatch(BatchStatement batch, long timestamp) {
     if(batch==null){
       return;
     }
+    batch.setDefaultTimestamp(timestamp);
     List<Row> rows = cassandraSession.execute(batch).all();
     for (Row row : rows) {
       if(!row.getBool("[applied]")) {

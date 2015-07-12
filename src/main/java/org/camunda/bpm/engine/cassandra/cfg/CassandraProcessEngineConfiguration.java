@@ -4,6 +4,7 @@ import org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSessionFact
 import org.camunda.bpm.engine.impl.cfg.StandaloneProcessEngineConfiguration;
 import org.camunda.bpm.engine.impl.persistence.StrongUuidGenerator;
 
+import com.datastax.driver.core.AtomicMonotonicTimestampGenerator;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Session;
@@ -36,6 +37,7 @@ public class CassandraProcessEngineConfiguration extends StandaloneProcessEngine
     if(cluster == null) {
       cluster = Cluster.builder()
         .addContactPoint(cassandraContactPoint)
+        .withTimestampGenerator(new AtomicMonotonicTimestampGenerator())
         .build();
       
       // make sure the keyspace exists (create it with default replication settings otherwise)
