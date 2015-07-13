@@ -9,7 +9,7 @@ import org.camunda.bpm.engine.impl.persistence.entity.ResourceEntity;
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Session;
 
-public class ResourceOperations implements EntityOperationHandler<ResourceEntity> {
+public class ResourceOperations extends AbstractEntityOperationHandler<ResourceEntity> {
 
   protected final static String INSERT = "INSERT into "+TABLE_NAME+" (id, name, deployment_id, content) "
       + "values "
@@ -32,6 +32,16 @@ public class ResourceOperations implements EntityOperationHandler<ResourceEntity
 
   public void update(CassandraPersistenceSession session, ResourceEntity entity) {
 
+  }
+
+  @Override
+  protected Class<ResourceEntity> getEntityType() {
+    return ResourceEntity.class;
+  }
+
+  @Override
+  protected String getTableName() {
+    return TABLE_NAME;
   }
 
 }

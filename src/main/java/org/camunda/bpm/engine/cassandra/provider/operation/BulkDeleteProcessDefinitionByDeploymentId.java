@@ -11,16 +11,15 @@
  * limitations under the License.
  */
 
-package org.camunda.bpm.engine.cassandra.provider;
+package org.camunda.bpm.engine.cassandra.provider.operation;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.in;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
-import org.camunda.bpm.engine.cassandra.provider.operation.BulkOperationHandler;
+import org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSession;
 import org.camunda.bpm.engine.cassandra.provider.table.ProcessDefinitionTableHandler;
 
 import com.datastax.driver.core.BatchStatement;

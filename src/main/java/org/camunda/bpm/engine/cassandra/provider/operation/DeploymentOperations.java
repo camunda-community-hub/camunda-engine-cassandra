@@ -1,18 +1,17 @@
 package org.camunda.bpm.engine.cassandra.provider.operation;
 
+import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
+
 import org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSession;
 import org.camunda.bpm.engine.cassandra.provider.serializer.CassandraSerializer;
 import org.camunda.bpm.engine.cassandra.provider.table.DeploymentTableHandler;
 import org.camunda.bpm.engine.impl.persistence.entity.DeploymentEntity;
 
-import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 
-import static com.datastax.driver.core.querybuilder.QueryBuilder.*;
-
-public class DeploymentOperations implements EntityOperationHandler<DeploymentEntity> {
+public class DeploymentOperations extends AbstractEntityOperationHandler<DeploymentEntity> {
 
   protected final static String INSERT_STMNT = "INSERT into "+DeploymentTableHandler.TABLE_NAME+" (id, name, deploy_time) "
       + "values "
@@ -39,4 +38,13 @@ public class DeploymentOperations implements EntityOperationHandler<DeploymentEn
     
   }
 
+  @Override
+  protected Class<DeploymentEntity> getEntityType() {
+    return DeploymentEntity.class;
+  }
+
+  @Override
+  protected String getTableName() {
+    return DeploymentTableHandler.TABLE_NAME;
+  }
 }

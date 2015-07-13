@@ -10,7 +10,7 @@ import org.camunda.bpm.engine.impl.db.DbEntity;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 
-public abstract class AbstractSingleEntityLoader<T extends DbEntity> implements SingleEntityLoader<T> {
+public abstract class AbstractEntityOperationHandler<T extends DbEntity> implements EntityOperationHandler<T> {
 
   public T getEntityById(CassandraPersistenceSession cassandraPersistenceSession, String id) {
 

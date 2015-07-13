@@ -2,26 +2,35 @@ package org.camunda.bpm.engine.cassandra.provider.operation;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.put;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSession;
+import org.camunda.bpm.engine.cassandra.provider.indexes.IndexHandler;
+import org.camunda.bpm.engine.cassandra.provider.indexes.ProcessIdByBusinessKeyIndex;
+import org.camunda.bpm.engine.cassandra.provider.indexes.ProcessIdByExecutionIdIndex;
 import org.camunda.bpm.engine.cassandra.provider.serializer.CassandraSerializer;
 import org.camunda.bpm.engine.cassandra.provider.table.ProcessInstanceTableHandler;
 import org.camunda.bpm.engine.cassandra.provider.type.UDTypeHandler;
 import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity;
 
-import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.UDTValue;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 
-public class ExecutionEntityOperations implements ProcessSubentityOperationsHandler<ExecutionEntity>{
-  public final static String ID_IDX_NAME = "exec_id";
-    
+public class ExecutionEntityOperations implements EntityOperationHandler<ExecutionEntity>{
   protected final static String INSERT = "INSERT into "+ProcessInstanceTableHandler.TABLE_NAME+" (id, version, business_key) "
       + "values "
       + "(?, ?, ?);";
+  
+  protected static Map<Class<?>, IndexHandler<ExecutionEntity>> indexHandlers = new HashMap<Class<?>, IndexHandler<ExecutionEntity>>();
+
+  static {
+    indexHandlers.put(ProcessIdByBusinessKeyIndex.class, new ProcessIdByBusinessKeyIndex());
+    indexHandlers.put(ProcessIdByExecutionIdIndex.class, new ProcessIdByExecutionIdIndex());
+  }
   
   public void insert(CassandraPersistenceSession session, ExecutionEntity entity) {
     
@@ -35,31 +44,38 @@ public class ExecutionEntityOperations implements ProcessSubentityOperationsHand
     }
     
     session.addStatement(createUpdateStatement(session, entity));
-    session.addStatement(createExecutionIdIndex(session, entity));    
+
+    for(IndexHandler<ExecutionEntity> index:indexHandlers.values()){
+      session.addStatement(index.getInsertStatement(entity));    
+    }
   }
 
   public void delete(CassandraPersistenceSession session, ExecutionEntity entity) {
     
     if(entity.isProcessInstanceExecution()) {
-     session.addStatement(QueryBuilder.delete().all()
+      session.addStatement(QueryBuilder.delete().all()
           .from(ProcessInstanceTableHandler.TABLE_NAME).where(eq("id", entity.getProcessInstanceId()))
           .onlyIf(eq("version", entity.getRevision())),
           entity.getProcessInstanceId());
-     session.batchShouldNotLock(entity.getProcessInstanceId());
+      session.batchShouldNotLock(entity.getProcessInstanceId());
     }
     else {
       session.addStatement(QueryBuilder.delete().mapElt("executions", entity.getId())
           .from(ProcessInstanceTableHandler.TABLE_NAME).where(eq("id", entity.getProcessInstanceId())),
           entity.getProcessInstanceId());
     }
-    session.addIndexStatement(QueryBuilder.delete().all()
-        .from(ProcessInstanceTableHandler.INDEX_TABLE_NAME)
-        .where(eq("idx_name", ID_IDX_NAME)).and(eq("idx_value",entity.getId())), entity.getProcessInstanceId());
+    
+    for(IndexHandler<ExecutionEntity> index:indexHandlers.values()){
+      session.addIndexStatement(index.getDeleteStatement(entity), entity.getProcessInstanceId());    
+    }
   }
 
   public void update(CassandraPersistenceSession session, ExecutionEntity entity) {
     session.addStatement(createUpdateStatement(session, entity), entity.getProcessInstanceId());
-    session.addIndexStatement(createExecutionIdIndex(session, entity), entity.getProcessInstanceId());
+
+    for(IndexHandler<ExecutionEntity> index:indexHandlers.values()){
+      session.addIndexStatement(index.getInsertStatement(entity), entity.getProcessInstanceId());    
+    }
   }
 
   protected Statement createUpdateStatement(CassandraPersistenceSession session, ExecutionEntity entity) {
@@ -76,28 +92,23 @@ public class ExecutionEntityOperations implements ProcessSubentityOperationsHand
         .where(eq("id", entity.getProcessInstanceId()));
   }
 
-  protected Statement createExecutionIdIndex(CassandraPersistenceSession session, ExecutionEntity entity) {
-    return QueryBuilder.insertInto(ProcessInstanceTableHandler.INDEX_TABLE_NAME)
-        .value("idx_name", ID_IDX_NAME)
-        .value("idx_value",entity.getId())
-        .value("id",entity.getProcessInstanceId());
-  }
-
-  /* (non-Javadoc)
-   * @see org.camunda.bpm.engine.cassandra.provider.operation.ProcessSubentityOperationsHandler#getById(java.lang.String)
-   */
   @Override
-  public ExecutionEntity getById(CassandraPersistenceSession session, String id) {
-    Session s = session.getSession();
-    Row row = s.execute(select("id").from(ProcessInstanceTableHandler.INDEX_TABLE_NAME).where(eq("idx_name", ID_IDX_NAME)).and(eq("idx_value", id))).one();
-    if(row == null) {
+  public ExecutionEntity getEntityById(CassandraPersistenceSession session, String id) {    
+    String procId = indexHandlers.get(ProcessIdByExecutionIdIndex.class).getUniqueValue(session, id);
+    if(procId==null){
       return null;
     }
-    String procId = row.getString("id");
     LoadedCompositeEntity loadedCompostite = session.selectCompositeById(ProcessInstanceLoader.NAME, procId);
     if(loadedCompostite==null){
       return null;
     }
+    if(procId.equals(id)){
+      return (ExecutionEntity) loadedCompostite.getPrimaryEntity();
+    }
     return (ExecutionEntity) loadedCompostite.get(ProcessInstanceLoader.EXECUTIONS).get(id);
+  }
+
+  public static IndexHandler<ExecutionEntity> getIndexHandler(Class<?> type){
+    return indexHandlers.get(type);
   }
 }

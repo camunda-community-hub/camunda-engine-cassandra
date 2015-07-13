@@ -11,4 +11,5 @@ public interface EntityOperationHandler<T extends DbEntity> {
   
   void update(CassandraPersistenceSession session, T entity);
   
+  T getEntityById(CassandraPersistenceSession cassandraPersistenceSession, String id);  
 }

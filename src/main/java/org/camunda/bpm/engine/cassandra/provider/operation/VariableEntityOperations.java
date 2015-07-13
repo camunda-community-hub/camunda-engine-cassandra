@@ -3,7 +3,12 @@ package org.camunda.bpm.engine.cassandra.provider.operation;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.put;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSession;
+import org.camunda.bpm.engine.cassandra.provider.indexes.IndexHandler;
+import org.camunda.bpm.engine.cassandra.provider.indexes.ProcessIdByVariableIdIndex;
 import org.camunda.bpm.engine.cassandra.provider.serializer.CassandraSerializer;
 import org.camunda.bpm.engine.cassandra.provider.table.ProcessInstanceTableHandler;
 import org.camunda.bpm.engine.cassandra.provider.type.UDTypeHandler;
@@ -14,19 +19,37 @@ import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.UDTValue;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 
-public class VariableEntityOperations implements ProcessSubentityOperationsHandler<VariableInstanceEntity>{
+public class VariableEntityOperations implements EntityOperationHandler<VariableInstanceEntity>{
+  protected static Map<Class<?>, IndexHandler<VariableInstanceEntity>> indexHandlers = new HashMap<Class<?>, IndexHandler<VariableInstanceEntity>>();
+
+  static {
+    indexHandlers.put(ProcessIdByVariableIdIndex.class, new ProcessIdByVariableIdIndex());
+  }
+  
 
   public void insert(CassandraPersistenceSession session, VariableInstanceEntity entity) {
     session.addStatement(createUpdateStatement(session, entity));
+
+    for(IndexHandler<VariableInstanceEntity> index:indexHandlers.values()){
+      session.addStatement(index.getInsertStatement(entity));    
+    }
   }
 
   public void delete(CassandraPersistenceSession session, VariableInstanceEntity entity) {
     session.addStatement(QueryBuilder.delete().mapElt("variables", entity.getId())
       .from(ProcessInstanceTableHandler.TABLE_NAME).where(eq("id", entity.getProcessInstanceId())), entity.getProcessInstanceId());
+    
+    for(IndexHandler<VariableInstanceEntity> index:indexHandlers.values()){
+      session.addIndexStatement(index.getDeleteStatement(entity), entity.getProcessInstanceId());    
+    }
   }
 
   public void update(CassandraPersistenceSession session, VariableInstanceEntity entity) {
     session.addStatement(createUpdateStatement(session, entity), entity.getProcessInstanceId());
+
+    for(IndexHandler<VariableInstanceEntity> index:indexHandlers.values()){
+      session.addIndexStatement(index.getInsertStatement(entity), entity.getProcessInstanceId());    
+    }
   }
 
   protected Statement createUpdateStatement(CassandraPersistenceSession session, VariableInstanceEntity entity) {
@@ -44,8 +67,19 @@ public class VariableEntityOperations implements ProcessSubentityOperationsHandl
   }
 
   @Override
-  public VariableInstanceEntity getById(CassandraPersistenceSession session, String id) {
-    // TODO Auto-generated method stub
-    return null;
+  public VariableInstanceEntity getEntityById(CassandraPersistenceSession session, String id) {    
+    String procId = indexHandlers.get(ProcessIdByVariableIdIndex.class).getUniqueValue(session, id);
+    if(procId==null){
+      return null;
+    }
+    LoadedCompositeEntity loadedCompostite = session.selectCompositeById(ProcessInstanceLoader.NAME, procId);
+    if(loadedCompostite==null){
+      return null;
+    }
+    return (VariableInstanceEntity) loadedCompostite.get(ProcessInstanceLoader.VARIABLES).get(id);
+  }
+
+  public static IndexHandler<VariableInstanceEntity> getIndexHandler(Class<?> type){
+    return indexHandlers.get(type);
   }
 }

@@ -3,7 +3,13 @@ package org.camunda.bpm.engine.cassandra.provider.operation;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.put;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSession;
+import org.camunda.bpm.engine.cassandra.provider.indexes.ExecutionIdByEventTypeAndNameIndex;
+import org.camunda.bpm.engine.cassandra.provider.indexes.IndexHandler;
+import org.camunda.bpm.engine.cassandra.provider.indexes.ProcessIdByEventSubscriptionIdIndex;
 import org.camunda.bpm.engine.cassandra.provider.serializer.CassandraSerializer;
 import org.camunda.bpm.engine.cassandra.provider.table.ProcessInstanceTableHandler;
 import org.camunda.bpm.engine.cassandra.provider.type.UDTypeHandler;
@@ -14,21 +20,37 @@ import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.UDTValue;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 
-public class EventSubscriptionOperations implements ProcessSubentityOperationsHandler<EventSubscriptionEntity> {
+public class EventSubscriptionOperations implements EntityOperationHandler<EventSubscriptionEntity> {
+  protected static Map<Class<?>, IndexHandler<EventSubscriptionEntity>> indexHandlers = new HashMap<Class<?>, IndexHandler<EventSubscriptionEntity>>();
+  static {
+    indexHandlers.put(ExecutionIdByEventTypeAndNameIndex.class, new ExecutionIdByEventTypeAndNameIndex());
+    indexHandlers.put(ProcessIdByEventSubscriptionIdIndex.class, new ProcessIdByEventSubscriptionIdIndex());
+  }
   
   public void insert(CassandraPersistenceSession session, EventSubscriptionEntity entity) {
     session.addStatement(createUpdateStatement(session, entity));
+    
+    for(IndexHandler<EventSubscriptionEntity> index:indexHandlers.values()){
+      session.addStatement(index.getInsertStatement(entity));    
+    }
   }
 
-  public void delete(CassandraPersistenceSession session, EventSubscriptionEntity entity) {
-    
+  public void delete(CassandraPersistenceSession session, EventSubscriptionEntity entity) {    
     session.addStatement(QueryBuilder.delete().mapElt("event_subscriptions", entity.getId())
         .from(ProcessInstanceTableHandler.TABLE_NAME).where(eq("id", entity.getProcessInstanceId())),
         entity.getProcessInstanceId());
+    
+    for(IndexHandler<EventSubscriptionEntity> index:indexHandlers.values()){
+      session.addIndexStatement(index.getDeleteStatement(entity), entity.getProcessInstanceId());    
+    }
   }
 
   public void update(CassandraPersistenceSession session, EventSubscriptionEntity entity) {
     session.addStatement(createUpdateStatement(session, entity), entity.getProcessInstanceId());
+    
+    for(IndexHandler<EventSubscriptionEntity> index:indexHandlers.values()){
+      session.addIndexStatement(index.getInsertStatement(entity), entity.getProcessInstanceId());    
+    }
   }
 
   protected Statement createUpdateStatement(CassandraPersistenceSession session, EventSubscriptionEntity entity) {
@@ -44,13 +66,19 @@ public class EventSubscriptionOperations implements ProcessSubentityOperationsHa
         .where(eq("id", entity.getProcessInstanceId()));
   }
 
-  /* (non-Javadoc)
-   * @see org.camunda.bpm.engine.cassandra.provider.operation.ProcessSubentityOperationsHandler#getById(org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSession, java.lang.String)
-   */
-  @Override
-  public EventSubscriptionEntity getById(CassandraPersistenceSession session, String id) {
-    // TODO Auto-generated method stub
-    return null;
+  public EventSubscriptionEntity getEntityById(CassandraPersistenceSession session, String id) {
+    String procId = indexHandlers.get(ProcessIdByEventSubscriptionIdIndex.class).getUniqueValue(session, id);
+    if(procId==null){
+      return null;
+    }
+    LoadedCompositeEntity loadedCompostite = session.selectCompositeById(ProcessInstanceLoader.NAME, procId);
+    if(loadedCompostite==null){
+      return null;
+    }
+    return (EventSubscriptionEntity) loadedCompostite.get(ProcessInstanceLoader.EVENT_SUBSCRIPTIONS).get(id);
   }
   
+  public static IndexHandler<EventSubscriptionEntity> getIndexHandler(Class<?> type){
+    return indexHandlers.get(type);
+  }
 }

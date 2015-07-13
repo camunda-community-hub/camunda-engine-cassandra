@@ -14,22 +14,20 @@ import org.camunda.bpm.engine.ProcessEngine;
 import org.camunda.bpm.engine.ProcessEngineException;
 import org.camunda.bpm.engine.cassandra.cfg.CassandraProcessEngineConfiguration;
 import org.camunda.bpm.engine.cassandra.provider.operation.BulkDeleteDeployment;
+import org.camunda.bpm.engine.cassandra.provider.operation.BulkDeleteProcessDefinitionByDeploymentId;
 import org.camunda.bpm.engine.cassandra.provider.operation.BulkDeleteResourcesByDeploymentId;
 import org.camunda.bpm.engine.cassandra.provider.operation.BulkOperationHandler;
 import org.camunda.bpm.engine.cassandra.provider.operation.CompositeEntityLoader;
-import org.camunda.bpm.engine.cassandra.provider.operation.DeploymentLoader;
 import org.camunda.bpm.engine.cassandra.provider.operation.DeploymentOperations;
 import org.camunda.bpm.engine.cassandra.provider.operation.EntityOperationHandler;
 import org.camunda.bpm.engine.cassandra.provider.operation.EventSubscriptionOperations;
 import org.camunda.bpm.engine.cassandra.provider.operation.ExecutionEntityOperations;
 import org.camunda.bpm.engine.cassandra.provider.operation.LoadedCompositeEntity;
-import org.camunda.bpm.engine.cassandra.provider.operation.ProcessDefinitionLoader;
 import org.camunda.bpm.engine.cassandra.provider.operation.ProcessDefinitionOperations;
 import org.camunda.bpm.engine.cassandra.provider.operation.ProcessInstanceLoader;
-import org.camunda.bpm.engine.cassandra.provider.operation.ProcessSubentityOperationsHandler;
 import org.camunda.bpm.engine.cassandra.provider.operation.ResourceOperations;
-import org.camunda.bpm.engine.cassandra.provider.operation.SingleEntityLoader;
 import org.camunda.bpm.engine.cassandra.provider.operation.VariableEntityOperations;
+import org.camunda.bpm.engine.cassandra.provider.query.SelectEventSubscriptionsByExecutionAndType;
 import org.camunda.bpm.engine.cassandra.provider.query.SelectExecutionsByQueryCriteria;
 import org.camunda.bpm.engine.cassandra.provider.query.SelectLatestProcessDefinitionByKeyQueryHandler;
 import org.camunda.bpm.engine.cassandra.provider.query.SelectListQueryHandler;
@@ -83,15 +81,14 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   protected static Map<Class<?>, UDTypeHandler> udtHandlers = new HashMap<Class<?>, UDTypeHandler>();  
   protected static Map<Class<?>, CassandraSerializer<?>> serializers = new HashMap<Class<?>, CassandraSerializer<?>>();
   protected static Map<Class<?>, EntityOperationHandler<?>> operations = new HashMap<Class<?>, EntityOperationHandler<?>>();
-  protected static Map<Class<?>, SingleEntityLoader<?>> singleEntityLoaders = new HashMap<Class<?>, SingleEntityLoader<?>>();
   protected static Map<String, CompositeEntityLoader> compositeEntitiyLoader = new HashMap<String, CompositeEntityLoader>();
   protected static Map<String, SingleResultQueryHandler<?>> singleResultQueryHandlers = new HashMap<String, SingleResultQueryHandler<?>>();
   protected static Map<String, SelectListQueryHandler<?, ?>> listResultQueryHandlers = new HashMap<String, SelectListQueryHandler<?,?>>();
   protected static Map<String, BulkOperationHandler> bulkOperationHandlers = new HashMap<String, BulkOperationHandler>();
-  //protected static Map<String, IndexQueryHandler> indexQueryHandlers = new HashMap<String, IndexQueryHandler>();
   
   protected BatchStatement varietyBatch = new BatchStatement();
   protected Map<String, LockedBatch<?>> lockedBatches = new HashMap<String, LockedBatch<?>>();
+  protected Map<String, Map<String, LoadedCompositeEntity>> loadedEntityCache = new HashMap<String, Map<String, LoadedCompositeEntity>>();
   
   
   static {
@@ -118,16 +115,14 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     operations.put(ExecutionEntity.class, new ExecutionEntityOperations());
     operations.put(VariableInstanceEntity.class, new VariableEntityOperations());
 
-    singleEntityLoaders.put(ProcessDefinitionEntity.class, new ProcessDefinitionLoader());
-    singleEntityLoaders.put(DeploymentEntity.class, new DeploymentLoader());
-    
     compositeEntitiyLoader.put(ProcessInstanceLoader.NAME, new ProcessInstanceLoader());
     
     singleResultQueryHandlers.put("selectLatestProcessDefinitionByKey", new SelectLatestProcessDefinitionByKeyQueryHandler());
 
     listResultQueryHandlers.put("selectExecutionsByQueryCriteria", new SelectExecutionsByQueryCriteria());
     listResultQueryHandlers.put("selectProcessInstanceByQueryCriteria", new SelectProcessInstanceByQueryCriteria());
-
+    listResultQueryHandlers.put("selectEventSubscriptionsByExecutionAndType", new SelectEventSubscriptionsByExecutionAndType());
+    
     bulkOperationHandlers.put("deleteDeployment", new BulkDeleteDeployment());
     bulkOperationHandlers.put("deleteResourcesByDeploymentId", new BulkDeleteResourcesByDeploymentId());
     bulkOperationHandlers.put("deleteProcessDefinitionsByDeploymentId", new BulkDeleteProcessDefinitionByDeploymentId());
@@ -154,26 +149,12 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
 
   @SuppressWarnings("unchecked")
   public <T extends DbEntity> T selectById(Class<T> type, String id) {
-    
-    if(type.equals(ExecutionEntity.class)) {
-      // special case:
-      LoadedCompositeEntity loadedCompostite = selectCompositeById(ProcessInstanceLoader.NAME, id);
-      if(loadedCompostite != null) {
-        return (T) loadedCompostite.getPrimaryEntity();
-      }
-    }
-    
+
     EntityOperationHandler<?> entityOperations = operations.get(type);
-    if(entityOperations instanceof ProcessSubentityOperationsHandler){
-      return ((ProcessSubentityOperationsHandler<T>) entityOperations).getById(this, id);
-    }
-    else {
-      SingleEntityLoader<?> singleEntityLoader = singleEntityLoaders.get(type);
-      if(singleEntityLoader != null) {
-        DbEntity loadedEntity = singleEntityLoader.getEntityById(this, id);
-        fireEntityLoaded(loadedEntity);
-        return (T) loadedEntity;
-      }
+    if(entityOperations != null) {
+      DbEntity loadedEntity = entityOperations.getEntityById(this, id);
+      fireEntityLoaded(loadedEntity);
+      return (T) loadedEntity;
     }
     
     LOG.warning("Unhandled select by id "+type +" "+id);
@@ -185,10 +166,22 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     if(loader == null) {
       throw new ProcessEngineException("There is no composite loader for the composite named "+ compositeName);
     }
+
+    if(loadedEntityCache.get(compositeName)!=null &&
+        loadedEntityCache.get(compositeName).get(id)!=null){
+      return loadedEntityCache.get(compositeName).get(id);
+    }
+
     LoadedCompositeEntity composite = loader.getEntityById(this, id);
     if(composite == null) {
       return null;
     }
+    
+    if(loadedEntityCache.get(compositeName)==null){
+      loadedEntityCache.put(compositeName, new HashMap<String, LoadedCompositeEntity>());
+    }
+    loadedEntityCache.get(compositeName).put(id, composite);
+    
     processLoadedComposite(composite);
     return composite;
   }
@@ -218,6 +211,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
       return result;
     }
     else if ("selectTableCount".equals(statement)) {
+      @SuppressWarnings("unchecked")
       String tableName = ((Map<String, String>) parameter).get("tableName");
       return cassandraSession.execute(QueryBuilder.select().countAll().from(tableName)).one().getLong(0);
     }
@@ -432,11 +426,17 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   }
   
   public void addStatement(Statement statement, String objectId) {
+    if(statement==null){
+      return;
+    }
     LockedBatch<?> batch = lockedBatches.get(objectId);
     batch.addStatement(statement);
   }
   
   public void addIndexStatement(Statement statement, String objectId) {
+    if(statement==null){
+      return;
+    }
     LockedBatch<?> batch = lockedBatches.get(objectId);
     batch.addIndexStatement(statement);
   }
@@ -447,6 +447,9 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   }
   
   public void addStatement(Statement statement) {
+    if(statement==null){
+      return;
+    }
     varietyBatch.add(statement);
   }
 }

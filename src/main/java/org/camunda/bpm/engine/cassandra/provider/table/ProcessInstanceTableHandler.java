@@ -26,8 +26,8 @@ public class ProcessInstanceTableHandler implements TableHandler {
   protected final static String CREATE_INDEX_TABLE = "CREATE TABLE IF NOT EXISTS "+INDEX_TABLE_NAME +" "
       + "(idx_name text, "
       + "idx_value text, "
-      + "id text, "
-      + "PRIMARY KEY ((idx_name, idx_value)));";
+      + "val text, "
+      + "PRIMARY KEY ((idx_name, idx_value), val));";
   
   public final static String DROP_TABLE = "DROP TABLE IF EXISTS "+TABLE_NAME+";";
   public final static String DROP_INDEX_TABLE = "DROP TABLE IF EXISTS "+INDEX_TABLE_NAME+";";

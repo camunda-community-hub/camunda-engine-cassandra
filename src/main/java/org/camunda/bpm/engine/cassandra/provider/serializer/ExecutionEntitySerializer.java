@@ -1,6 +1,5 @@
 package org.camunda.bpm.engine.cassandra.provider.serializer;
 
-import org.camunda.bpm.engine.impl.db.DbEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity;
 
 import com.datastax.driver.core.GettableData;

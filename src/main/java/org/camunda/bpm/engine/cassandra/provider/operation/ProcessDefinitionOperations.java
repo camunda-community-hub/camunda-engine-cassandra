@@ -1,20 +1,19 @@
 package org.camunda.bpm.engine.cassandra.provider.operation;
 
-import static com.datastax.driver.core.querybuilder.QueryBuilder.*;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
+import static org.camunda.bpm.engine.cassandra.provider.table.ProcessDefinitionTableHandler.TABLE_NAME;
+import static org.camunda.bpm.engine.cassandra.provider.table.ProcessDefinitionTableHandler.TABLE_NAME_IDX_VERSION;
 
 import org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSession;
 import org.camunda.bpm.engine.cassandra.provider.serializer.CassandraSerializer;
-import org.camunda.bpm.engine.cassandra.provider.table.DeploymentTableHandler;
+import org.camunda.bpm.engine.cassandra.provider.table.ProcessDefinitionTableHandler;
 import org.camunda.bpm.engine.impl.persistence.entity.ProcessDefinitionEntity;
 
-import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 
-import static org.camunda.bpm.engine.cassandra.provider.table.ProcessDefinitionTableHandler.*; 
-
-public class ProcessDefinitionOperations implements EntityOperationHandler<ProcessDefinitionEntity> {
+public class ProcessDefinitionOperations extends AbstractEntityOperationHandler<ProcessDefinitionEntity> {
   
   protected final static String INSERT = "INSERT into "+TABLE_NAME+" (id, key, version, category, name, deployment_id, suspension_state) "
       + "values "
@@ -51,5 +50,14 @@ public class ProcessDefinitionOperations implements EntityOperationHandler<Proce
   public void update(CassandraPersistenceSession session, ProcessDefinitionEntity entity) {
     
   }
+
+  protected Class<ProcessDefinitionEntity> getEntityType() {
+    return ProcessDefinitionEntity.class;
+  }
+
+  protected String getTableName() {
+    return ProcessDefinitionTableHandler.TABLE_NAME;
+  }
+
 
 }
