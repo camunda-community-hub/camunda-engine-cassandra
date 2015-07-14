@@ -6,7 +6,6 @@ import java.util.HashSet;
 /**
  * Class to store names of all indexes. Should only be used by the index classes. 
  * Please choose short index names for any new indexes, prefixed with 2 letter entity prefix.
- * Entity in the prefix is the entity being indexed (containing the data in the index value).
  * 
  * @author Natalia Levine
  *
@@ -21,9 +20,12 @@ class IndexNames {
   //execution indexes
   static final String PROCESS_ID_BY_BUSINESS_KEY = "ex_bkey";
   static final String PROCESS_ID_BY_EXECUTION_ID = "ex_id";
+  static final String EXECUTION_ID_BY_PROCESS_ID = "ex_pr_id";
   
   //variable instance indexes
   static final String PROCESS_ID_BY_VARIABLE_ID = "var_id";
+  static final String EXECUTION_ID_BY_VARIABLE_VALUE = "var_ex";
+  static final String PROCESS_ID_BY_PROCESS_VARIABLE_VALUE = "var_pr";
 
   static {
     //this is just ensuring uniqueness of index names - might be useful if a lot of new indexes are added

@@ -29,7 +29,6 @@ public abstract class AbstractIndexHandler <T extends DbEntity> implements Index
   protected abstract String getIndexName();
   protected abstract String getIndexValue(T entity);
   protected abstract String getValue(T entity);
-  protected abstract boolean isUnique();
   
   @Override
   public String getUniqueValue(CassandraPersistenceSession cassandraPersistenceSession, String ... indexValues){
@@ -92,7 +91,7 @@ public abstract class AbstractIndexHandler <T extends DbEntity> implements Index
     StringBuffer buf=new StringBuffer();
     buf.append(indexValues[0]);
     for(int i=1;i<indexValues.length;i++){
-      buf.append(".").append(indexValues[i]);
+      buf.append("_").append(indexValues[i]);
     }
     return buf.toString();
   }
@@ -120,7 +119,18 @@ public abstract class AbstractIndexHandler <T extends DbEntity> implements Index
     }
   }
   
-  public Set<String> crossCheckIndexes(List<Set<String>> sets){
+  public boolean checkIndexMatch(T entity, String ... indexValues){
+    return getIndexValue(entity).equals(getIndexValue(indexValues));
+  }
+ 
+  public static Set<String> crossCheckIndexes(Set<String> set1, Set<String> set2){
+    List<Set<String>> list=new ArrayList<Set<String>>(2);
+    list.add(set1);
+    list.add(set2);
+    return crossCheckIndexes(list);
+  }
+  
+  public static Set<String> crossCheckIndexes(List<Set<String>> sets){
     HashSet<String> result = new HashSet<String>();
     if(sets==null || sets.size()==0){
       return result;

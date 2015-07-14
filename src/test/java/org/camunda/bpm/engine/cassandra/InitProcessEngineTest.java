@@ -54,10 +54,10 @@ public class InitProcessEngineTest extends PluggableProcessEngineTestCase{
     String varValue = (String) processEngine.getRuntimeService().getVariable(processInstance.getId(), "testVar");
     assertEquals("testVarValue",varValue);
     
-    processEngine.getRuntimeService().setVariable(processInstance.getId(), "testVar2", "testVarValue2");
+    processEngine.getRuntimeService().setVariable(processInstance.getId(), "testVar2", new Boolean(true));
 
-    String varValue2 = (String) processEngine.getRuntimeService().getVariable(processInstance.getId(), "testVar2");
-    assertEquals("testVarValue2",varValue2);
+    Boolean varValue2 = (Boolean) processEngine.getRuntimeService().getVariable(processInstance.getId(), "testVar2");
+    assertEquals(new Boolean(true),varValue2);
     
     List<Execution> executions=processEngine.getRuntimeService()
     		.createExecutionQuery()

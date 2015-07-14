@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSession;
+import org.camunda.bpm.engine.cassandra.provider.indexes.ExecutionIdByProcessIdIndex;
 import org.camunda.bpm.engine.cassandra.provider.indexes.IndexHandler;
 import org.camunda.bpm.engine.cassandra.provider.indexes.ProcessIdByBusinessKeyIndex;
 import org.camunda.bpm.engine.cassandra.provider.indexes.ProcessIdByExecutionIdIndex;
@@ -30,6 +31,7 @@ public class ExecutionEntityOperations implements EntityOperationHandler<Executi
   static {
     indexHandlers.put(ProcessIdByBusinessKeyIndex.class, new ProcessIdByBusinessKeyIndex());
     indexHandlers.put(ProcessIdByExecutionIdIndex.class, new ProcessIdByExecutionIdIndex());
+    indexHandlers.put(ExecutionIdByProcessIdIndex.class, new ExecutionIdByProcessIdIndex());
   }
   
   public void insert(CassandraPersistenceSession session, ExecutionEntity entity) {

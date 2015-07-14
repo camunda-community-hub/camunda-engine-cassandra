@@ -21,7 +21,7 @@ public class ExecutionIdByEventTypeAndNameIndex extends AbstractIndexHandler<Eve
   }
 
   @Override
-  protected boolean isUnique() {
+  public boolean isUnique() {
     return false;
   }
 

@@ -2,13 +2,17 @@ package org.camunda.bpm.engine.cassandra.provider.operation;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.put;
+import static org.camunda.bpm.engine.cassandra.provider.operation.ProcessInstanceLoader.VARIABLES;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSession;
+import org.camunda.bpm.engine.cassandra.provider.indexes.ExecutionIdByVariableValueIndex;
 import org.camunda.bpm.engine.cassandra.provider.indexes.IndexHandler;
 import org.camunda.bpm.engine.cassandra.provider.indexes.ProcessIdByVariableIdIndex;
+import org.camunda.bpm.engine.cassandra.provider.indexes.ProcessIdByProcessVariableValueIndex;
 import org.camunda.bpm.engine.cassandra.provider.serializer.CassandraSerializer;
 import org.camunda.bpm.engine.cassandra.provider.table.ProcessInstanceTableHandler;
 import org.camunda.bpm.engine.cassandra.provider.type.UDTypeHandler;
@@ -24,6 +28,8 @@ public class VariableEntityOperations implements EntityOperationHandler<Variable
 
   static {
     indexHandlers.put(ProcessIdByVariableIdIndex.class, new ProcessIdByVariableIdIndex());
+    indexHandlers.put(ExecutionIdByVariableValueIndex.class, new ExecutionIdByVariableValueIndex());
+    indexHandlers.put(ProcessIdByProcessVariableValueIndex.class, new ProcessIdByProcessVariableValueIndex());
   }
   
 
@@ -39,6 +45,10 @@ public class VariableEntityOperations implements EntityOperationHandler<Variable
     session.addStatement(QueryBuilder.delete().mapElt("variables", entity.getId())
       .from(ProcessInstanceTableHandler.TABLE_NAME).where(eq("id", entity.getProcessInstanceId())), entity.getProcessInstanceId());
     
+    if(entity.getValue()==null){
+      LoadedCompositeEntity loadedProcessInstance = session.selectCompositeById(ProcessInstanceLoader.NAME, entity.getProcessInstanceId());
+      entity = (VariableInstanceEntity) loadedProcessInstance.get(VARIABLES).get(entity.getId());            
+    }
     for(IndexHandler<VariableInstanceEntity> index:indexHandlers.values()){
       session.addIndexStatement(index.getDeleteStatement(entity), entity.getProcessInstanceId());    
     }

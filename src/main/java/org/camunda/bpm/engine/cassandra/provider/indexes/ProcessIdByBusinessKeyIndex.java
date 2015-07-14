@@ -23,7 +23,7 @@ public class ProcessIdByBusinessKeyIndex extends AbstractIndexHandler<ExecutionE
   }
 
   @Override
-  protected boolean isUnique() {
+  public boolean isUnique() {
     return true;
   }
 

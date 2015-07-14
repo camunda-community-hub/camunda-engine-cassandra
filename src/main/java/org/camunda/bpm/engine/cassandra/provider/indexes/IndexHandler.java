@@ -1,7 +1,6 @@
 package org.camunda.bpm.engine.cassandra.provider.indexes;
 
 import java.util.List;
-import java.util.Set;
 
 import org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSession;
 import org.camunda.bpm.engine.impl.db.DbEntity;
@@ -19,5 +18,6 @@ public interface IndexHandler <T extends DbEntity>{
   public List<String> getValues(CassandraPersistenceSession cassandraPersistenceSession, String ... indexValue);
   public Statement getInsertStatement(T entity);
   public Statement getDeleteStatement(T entity);
-  public Set<String> crossCheckIndexes(List<Set<String>> sets);
+  public boolean checkIndexMatch(T entity, String ... indexValues);
+  public boolean isUnique();
 }
