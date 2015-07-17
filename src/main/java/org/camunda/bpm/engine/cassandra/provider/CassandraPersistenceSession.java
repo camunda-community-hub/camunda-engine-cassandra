@@ -80,7 +80,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   protected static List<TableHandler> tableHandlers = new ArrayList<TableHandler>();
   protected static Map<Class<?>, UDTypeHandler> udtHandlers = new HashMap<Class<?>, UDTypeHandler>();  
   protected static Map<Class<?>, CassandraSerializer<?>> serializers = new HashMap<Class<?>, CassandraSerializer<?>>();
-  protected static Map<Class<?>, EntityOperationHandler<?>> operations = new HashMap<Class<?>, EntityOperationHandler<?>>();
+  protected Map<Class<?>, EntityOperationHandler<?>> operations = new HashMap<Class<?>, EntityOperationHandler<?>>();
   protected static Map<String, CompositeEntityLoader> compositeEntitiyLoader = new HashMap<String, CompositeEntityLoader>();
   protected static Map<String, SingleResultQueryHandler<?>> singleResultQueryHandlers = new HashMap<String, SingleResultQueryHandler<?>>();
   protected static Map<String, SelectListQueryHandler<?, ?>> listResultQueryHandlers = new HashMap<String, SelectListQueryHandler<?,?>>();
@@ -108,13 +108,6 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     tableHandlers.add(new DeploymentTableHandler());
     tableHandlers.add(new ProcessInstanceTableHandler());
     
-    operations.put(MessageEventSubscriptionEntity.class, new EventSubscriptionOperations());
-    operations.put(ProcessDefinitionEntity.class, new ProcessDefinitionOperations());
-    operations.put(ResourceEntity.class, new ResourceOperations());
-    operations.put(DeploymentEntity.class, new DeploymentOperations());
-    operations.put(ExecutionEntity.class, new ExecutionEntityOperations());
-    operations.put(VariableInstanceEntity.class, new VariableEntityOperations());
-
     compositeEntitiyLoader.put(ProcessInstanceLoader.NAME, new ProcessInstanceLoader());
     
     singleResultQueryHandlers.put("selectLatestProcessDefinitionByKey", new SelectLatestProcessDefinitionByKeyQueryHandler());
@@ -133,10 +126,19 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   
   public CassandraPersistenceSession(com.datastax.driver.core.Session session) {
     this.cassandraSession = session;
+    //might be useful to keep context in operation for the duration of a single transaction 
+    operations.put(MessageEventSubscriptionEntity.class, new EventSubscriptionOperations());
+    operations.put(ProcessDefinitionEntity.class, new ProcessDefinitionOperations());
+    operations.put(ResourceEntity.class, new ResourceOperations());
+    operations.put(DeploymentEntity.class, new DeploymentOperations());
+    operations.put(ExecutionEntity.class, new ExecutionEntityOperations());
+    operations.put(VariableInstanceEntity.class, new VariableEntityOperations());
+
   }
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
   public List<?> selectList(String statement, Object parameter) {
+    LOG.log(Level.FINE, "selectList for statement '"+statement+"' parameter: "+parameter.toString());
     SelectListQueryHandler handler = listResultQueryHandlers.get(statement);
     if(handler == null) {
       LOG.log(Level.WARNING, "unhandled select statement '"+statement+"'");
@@ -149,6 +151,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
 
   @SuppressWarnings("unchecked")
   public <T extends DbEntity> T selectById(Class<T> type, String id) {
+    LOG.log(Level.FINE, "selectById for type '"+type.getSimpleName()+"' id '" +id+"'");
 
     EntityOperationHandler<?> entityOperations = operations.get(type);
     if(entityOperations != null) {
@@ -187,6 +190,8 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   }
   
   protected void processLoadedComposite(LoadedCompositeEntity composite) {
+    ((VariableEntityOperations)operations.get(VariableInstanceEntity.class)).onCompositeLoad(composite);
+    
     DbEntity mainEntity = composite.getPrimaryEntity();
     boolean isMainEntityEventFired = false;
     for (Map<String, ? extends DbEntity> entities : composite.getEmbeddedEntities().values()) {
@@ -203,6 +208,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   }
 
   public Object selectOne(String statement, Object parameter) {
+    LOG.log(Level.FINE, "selectOne for statement '"+statement+"' parameter: "+parameter.toString());
     
     SingleResultQueryHandler<?> queryHandler = singleResultQueryHandlers.get(statement);
     if(queryHandler != null) {
@@ -227,6 +233,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   }
 
   public void commit() {
+    LOG.log(Level.FINE, "commit");
     //apply all batches in the transaction with the same timestamp 
     long timestamp = ((CassandraProcessEngineConfiguration)Context.getProcessEngineConfiguration())
         .getCluster().getConfiguration().getPolicies().getTimestampGenerator().next();
@@ -268,6 +275,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   
   @SuppressWarnings({ "rawtypes", "unchecked" })
   protected void insertEntity(DbEntityOperation operation) {
+    LOG.log(Level.FINE, "insertEntity, operation: "+operation.toString());
     EntityOperationHandler entityOperations = operations.get(operation.getEntityType());
     if(entityOperations == null) {
       LOG.log(Level.WARNING, "unhandled INSERT '"+operation+"'");
@@ -280,6 +288,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
 
   @SuppressWarnings({ "rawtypes", "unchecked" })
   protected void deleteEntity(DbEntityOperation operation) {
+    LOG.log(Level.FINE, "deleteEntity, operation: "+operation.toString());
     EntityOperationHandler entityOperations = operations.get(operation.getEntityType());
     if(entityOperations == null) {
       LOG.log(Level.WARNING, "unhandled DELETE '"+operation+"'");
@@ -290,6 +299,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   }
 
   protected void deleteBulk(DbBulkOperation operation) {
+    LOG.log(Level.FINE, "deleteBulk, operation: "+operation.toString());
     BulkOperationHandler handler = bulkOperationHandlers.get(operation.getStatement());
     if(handler == null) {
       LOG.log(Level.WARNING, "unhandled BULK delete '"+operation+"'");
@@ -301,6 +311,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
 
   @SuppressWarnings({ "rawtypes", "unchecked" })
   protected void updateEntity(DbEntityOperation operation) {
+    LOG.log(Level.FINE, "updateEntity, operation: "+operation.toString());
     EntityOperationHandler entityOperations = operations.get(operation.getEntityType());
     if(entityOperations == null) {
       LOG.log(Level.WARNING, "unhandled UPDATE '"+operation+"'");

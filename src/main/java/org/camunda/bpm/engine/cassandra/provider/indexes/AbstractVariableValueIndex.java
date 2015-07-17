@@ -20,7 +20,7 @@ import org.camunda.bpm.engine.variable.value.TypedValue;
  * @created 14/07/2015
  */
 
-public abstract class AbstractExecutionIdByVariableValueIndex extends AbstractIndexHandler<VariableInstanceEntity> {
+public abstract class AbstractVariableValueIndex extends AbstractIndexHandler<VariableInstanceEntity> {
   private final int LENGTH_LIMIT=256; //completely arbitrary, don't want to index on really long text variables
 
   @Override

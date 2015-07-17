@@ -117,7 +117,7 @@ public class SelectExecutionsByQueryCriteria implements SelectListQueryHandler<E
       }
     }
     if(!resultMap.isEmpty()){
-      //filter again in case some index inconsistency, also for events with null names
+      //filter again in case some index inconsistency, also for events type for events with null names
       return filter(resultMap, session, executionQuery);
     }
 

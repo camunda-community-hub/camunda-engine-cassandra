@@ -7,7 +7,7 @@ import org.camunda.bpm.engine.impl.persistence.entity.VariableInstanceEntity;
  *
  * @created 15/07/2015
  */
-public class ExecutionIdByVariableValueIndex extends AbstractExecutionIdByVariableValueIndex{
+public class ExecutionIdByVariableValueIndex extends AbstractVariableValueIndex{
   @Override
   protected String getIndexName() {
     return IndexNames.EXECUTION_ID_BY_VARIABLE_VALUE;
