@@ -1,6 +1,5 @@
 package org.camunda.bpm.engine.cassandra.provider.indexes;
 
-import org.camunda.bpm.engine.cassandra.provider.table.ProcessInstanceTableHandler;
 import org.camunda.bpm.engine.impl.persistence.entity.EventSubscriptionEntity;
 
 /**
@@ -9,11 +8,6 @@ import org.camunda.bpm.engine.impl.persistence.entity.EventSubscriptionEntity;
  * @created 12/07/2015
  */
 public class ProcessIdByEventSubscriptionIdIndex extends AbstractIndexHandler<EventSubscriptionEntity> {
-
-  @Override
-  protected String getTableName() {
-    return ProcessInstanceTableHandler.INDEX_TABLE_NAME;
-  }
 
   @Override
   protected String getIndexName() {

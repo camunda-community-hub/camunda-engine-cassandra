@@ -31,7 +31,7 @@ public class EventSubscriptionOperations implements EntityOperationHandler<Event
     session.addStatement(createUpdateStatement(session, entity));
     
     for(IndexHandler<EventSubscriptionEntity> index:indexHandlers.values()){
-      session.addStatement(index.getInsertStatement(entity));    
+      session.addStatement(index.getInsertStatement(session,entity));    
     }
   }
 
@@ -41,7 +41,7 @@ public class EventSubscriptionOperations implements EntityOperationHandler<Event
         entity.getProcessInstanceId());
     
     for(IndexHandler<EventSubscriptionEntity> index:indexHandlers.values()){
-      session.addIndexStatement(index.getDeleteStatement(entity), entity.getProcessInstanceId());    
+      session.addIndexStatement(index.getDeleteStatement(session,entity), entity.getProcessInstanceId());    
     }
   }
 
@@ -49,7 +49,7 @@ public class EventSubscriptionOperations implements EntityOperationHandler<Event
     session.addStatement(createUpdateStatement(session, entity), entity.getProcessInstanceId());
     
     for(IndexHandler<EventSubscriptionEntity> index:indexHandlers.values()){
-      session.addIndexStatement(index.getInsertStatement(entity), entity.getProcessInstanceId());    
+      session.addIndexStatement(index.getInsertStatement(session,entity), entity.getProcessInstanceId());    
     }
   }
 

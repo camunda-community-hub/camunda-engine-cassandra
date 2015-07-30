@@ -31,6 +31,7 @@ import org.camunda.bpm.engine.cassandra.provider.query.SelectEventSubscriptionsB
 import org.camunda.bpm.engine.cassandra.provider.query.SelectExecutionsByQueryCriteria;
 import org.camunda.bpm.engine.cassandra.provider.query.SelectLatestProcessDefinitionByKeyQueryHandler;
 import org.camunda.bpm.engine.cassandra.provider.query.SelectListQueryHandler;
+import org.camunda.bpm.engine.cassandra.provider.query.SelectProcessDefinitionByDeploymentId;
 import org.camunda.bpm.engine.cassandra.provider.query.SelectProcessInstanceByQueryCriteria;
 import org.camunda.bpm.engine.cassandra.provider.query.SingleResultQueryHandler;
 import org.camunda.bpm.engine.cassandra.provider.serializer.CassandraSerializer;
@@ -41,6 +42,7 @@ import org.camunda.bpm.engine.cassandra.provider.serializer.ProcessDefinitionSer
 import org.camunda.bpm.engine.cassandra.provider.serializer.ResourceEntitySerializer;
 import org.camunda.bpm.engine.cassandra.provider.serializer.VariableEntitySerializer;
 import org.camunda.bpm.engine.cassandra.provider.table.DeploymentTableHandler;
+import org.camunda.bpm.engine.cassandra.provider.table.IndexTableHandler;
 import org.camunda.bpm.engine.cassandra.provider.table.ProcessDefinitionTableHandler;
 import org.camunda.bpm.engine.cassandra.provider.table.ProcessInstanceTableHandler;
 import org.camunda.bpm.engine.cassandra.provider.table.ResourceTableHandler;
@@ -80,12 +82,13 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   protected static List<TableHandler> tableHandlers = new ArrayList<TableHandler>();
   protected static Map<Class<?>, UDTypeHandler> udtHandlers = new HashMap<Class<?>, UDTypeHandler>();  
   protected static Map<Class<?>, CassandraSerializer<?>> serializers = new HashMap<Class<?>, CassandraSerializer<?>>();
-  protected Map<Class<?>, EntityOperationHandler<?>> operations = new HashMap<Class<?>, EntityOperationHandler<?>>();
   protected static Map<String, CompositeEntityLoader> compositeEntitiyLoader = new HashMap<String, CompositeEntityLoader>();
   protected static Map<String, SingleResultQueryHandler<?>> singleResultQueryHandlers = new HashMap<String, SingleResultQueryHandler<?>>();
   protected static Map<String, SelectListQueryHandler<?, ?>> listResultQueryHandlers = new HashMap<String, SelectListQueryHandler<?,?>>();
   protected static Map<String, BulkOperationHandler> bulkOperationHandlers = new HashMap<String, BulkOperationHandler>();
   
+  protected Map<Class<?>, EntityOperationHandler<?>> operations = new HashMap<Class<?>, EntityOperationHandler<?>>();
+
   protected BatchStatement varietyBatch = new BatchStatement();
   protected Map<String, LockedBatch<?>> lockedBatches = new HashMap<String, LockedBatch<?>>();
   protected Map<String, Map<String, LoadedCompositeEntity>> loadedEntityCache = new HashMap<String, Map<String, LoadedCompositeEntity>>();
@@ -107,11 +110,13 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     tableHandlers.add(new ResourceTableHandler());
     tableHandlers.add(new DeploymentTableHandler());
     tableHandlers.add(new ProcessInstanceTableHandler());
+    tableHandlers.add(new IndexTableHandler());
     
     compositeEntitiyLoader.put(ProcessInstanceLoader.NAME, new ProcessInstanceLoader());
     
-    singleResultQueryHandlers.put("selectLatestProcessDefinitionByKey", new SelectLatestProcessDefinitionByKeyQueryHandler());
-
+    singleResultQueryHandlers.put("selectLatestProcessDefinitionByKey", new SelectLatestProcessDefinitionByKeyQueryHandler());   
+    
+    listResultQueryHandlers.put("selectProcessDefinitionByDeploymentId", new SelectProcessDefinitionByDeploymentId());
     listResultQueryHandlers.put("selectExecutionsByQueryCriteria", new SelectExecutionsByQueryCriteria());
     listResultQueryHandlers.put("selectProcessInstanceByQueryCriteria", new SelectProcessInstanceByQueryCriteria());
     listResultQueryHandlers.put("selectEventSubscriptionsByExecutionAndType", new SelectEventSubscriptionsByExecutionAndType());
@@ -462,5 +467,32 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
       return;
     }
     varietyBatch.add(statement);
+  }
+
+  /* (non-Javadoc)
+   * @see org.camunda.bpm.engine.impl.db.AbstractPersistenceSession#dbSchemaCreateDmn()
+   */
+  @Override
+  protected void dbSchemaCreateDmn() {
+    // TODO Auto-generated method stub
+    
+  }
+
+  /* (non-Javadoc)
+   * @see org.camunda.bpm.engine.impl.db.AbstractPersistenceSession#dbSchemaDropDmn()
+   */
+  @Override
+  protected void dbSchemaDropDmn() {
+    // TODO Auto-generated method stub
+    
+  }
+
+  /* (non-Javadoc)
+   * @see org.camunda.bpm.engine.impl.db.AbstractPersistenceSession#isDmnTablePresent()
+   */
+  @Override
+  public boolean isDmnTablePresent() {
+    // TODO Auto-generated method stub
+    return false;
   }
 }

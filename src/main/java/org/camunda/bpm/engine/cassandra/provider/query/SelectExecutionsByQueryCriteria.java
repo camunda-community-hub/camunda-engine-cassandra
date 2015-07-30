@@ -96,12 +96,18 @@ public class SelectExecutionsByQueryCriteria implements SelectListQueryHandler<E
         return Collections.emptyList();
       }
     }
+
+    // get by event subscriptions - only if we did not get anything by variables. 
+    // If we did get something by variables we are assuming that the result set is small 
+    // and it is better to filter by subscriptions instead of getting the whole subscription
+    // index, which can be quite large
     
-    // get by event subscription
-    if(executionQuery.getEventSubscriptions() != null && !executionQuery.getEventSubscriptions().isEmpty()) {
-      executionIdSet=getIdsByEventSubscriptions(session, executionQuery.getEventSubscriptions(), executionIdSet);
-      if(executionIdSet==null || executionIdSet.isEmpty()){
-        return Collections.emptyList();
+    if(executionIdSet==null || executionIdSet.isEmpty()){
+      if(executionQuery.getEventSubscriptions() != null && !executionQuery.getEventSubscriptions().isEmpty()) {
+        executionIdSet=getIdsByEventSubscriptions(session, executionQuery.getEventSubscriptions(), executionIdSet);
+        if(executionIdSet==null || executionIdSet.isEmpty()){
+          return Collections.emptyList();
+        }
       }
     }
 

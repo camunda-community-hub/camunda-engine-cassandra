@@ -4,7 +4,6 @@ import java.util.Collections;
 import java.util.List;
 
 import org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSession;
-import org.camunda.bpm.engine.cassandra.provider.table.ProcessInstanceTableHandler;
 import org.camunda.bpm.engine.impl.core.variable.type.PrimitiveValueTypeImpl.BytesTypeImpl;
 import org.camunda.bpm.engine.impl.core.variable.value.UntypedValueImpl;
 import org.camunda.bpm.engine.impl.persistence.entity.VariableInstanceEntity;
@@ -22,11 +21,6 @@ import org.camunda.bpm.engine.variable.value.TypedValue;
 
 public abstract class AbstractVariableValueIndex extends AbstractIndexHandler<VariableInstanceEntity> {
   private final int LENGTH_LIMIT=256; //completely arbitrary, don't want to index on really long text variables
-
-  @Override
-  protected String getTableName() {
-    return ProcessInstanceTableHandler.INDEX_TABLE_NAME;
-  }
 
   @Override
   protected String getIndexValue(VariableInstanceEntity entity) {

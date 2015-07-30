@@ -1,6 +1,5 @@
 package org.camunda.bpm.engine.cassandra.provider.indexes;
 
-import org.camunda.bpm.engine.cassandra.provider.table.ProcessInstanceTableHandler;
 import org.camunda.bpm.engine.impl.persistence.entity.VariableInstanceEntity;
 
 /**
@@ -9,11 +8,6 @@ import org.camunda.bpm.engine.impl.persistence.entity.VariableInstanceEntity;
  * @created 12/07/2015
  */
 public class ProcessIdByVariableIdIndex extends AbstractIndexHandler<VariableInstanceEntity> {
-
-  @Override
-  protected String getTableName() {
-    return ProcessInstanceTableHandler.INDEX_TABLE_NAME;
-  }
 
   @Override
   protected String getIndexName() {

@@ -92,9 +92,7 @@ public class ProcessInstanceLoader implements CompositeEntityLoader {
     Map<String, EventSubscriptionEntity> eventSubscriptions = (Map<String, EventSubscriptionEntity>) compositeEntity.getEmbeddedEntities().get(EVENT_SUBSCRIPTIONS);
     Map<String, VariableInstanceEntity> variables = (Map<String, VariableInstanceEntity>) compositeEntity.getEmbeddedEntities().get(VARIABLES);
 
-    ExecutionEntity.initializeExecutions(processInstance, executions);
-    ExecutionEntity.initializeEventSubscription(executions, eventSubscriptions.values());
-    ExecutionEntity.initializeVariables(executions, variables.values());
+    processInstance.restoreProcessInstance(executions.values(), eventSubscriptions.values(), variables.values());
   }
 
 }

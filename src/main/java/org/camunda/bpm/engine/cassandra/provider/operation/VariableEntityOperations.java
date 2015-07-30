@@ -38,7 +38,7 @@ public class VariableEntityOperations implements EntityOperationHandler<Variable
     session.addStatement(createUpdateStatement(session, entity));
 
     for(IndexHandler<VariableInstanceEntity> index:indexHandlers.values()){
-      session.addStatement(index.getInsertStatement(entity));    
+      session.addStatement(index.getInsertStatement(session,entity));    
     }
   }
 
@@ -47,7 +47,7 @@ public class VariableEntityOperations implements EntityOperationHandler<Variable
       .from(ProcessInstanceTableHandler.TABLE_NAME).where(eq("id", entity.getProcessInstanceId())), entity.getProcessInstanceId());
     
     for(IndexHandler<VariableInstanceEntity> index:indexHandlers.values()){
-      session.addIndexStatement(index.getDeleteStatement(varValuesCache.get(entity.getId())), entity.getProcessInstanceId());  
+      session.addIndexStatement(index.getDeleteStatement(session,varValuesCache.get(entity.getId())), entity.getProcessInstanceId());  
     }
     varValuesCache.remove(entity.getId());
   }
@@ -56,9 +56,9 @@ public class VariableEntityOperations implements EntityOperationHandler<Variable
     session.addStatement(createUpdateStatement(session, entity), entity.getProcessInstanceId());
 
     for(IndexHandler<VariableInstanceEntity> index:indexHandlers.values()){
-      session.addIndexStatement(index.getInsertStatement(entity), entity.getProcessInstanceId());  
+      session.addIndexStatement(index.getInsertStatement(session,entity), entity.getProcessInstanceId());  
       if(index instanceof AbstractVariableValueIndex){
-        session.addIndexStatement(index.getDeleteStatement(varValuesCache.get(entity.getId())), entity.getProcessInstanceId());
+        session.addIndexStatement(index.getDeleteStatement(session,varValuesCache.get(entity.getId())), entity.getProcessInstanceId());
       }
     }
     updateVariableCache(entity);
