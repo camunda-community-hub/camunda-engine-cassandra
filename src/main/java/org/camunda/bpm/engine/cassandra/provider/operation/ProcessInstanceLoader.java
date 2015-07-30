@@ -24,24 +24,24 @@ public class ProcessInstanceLoader implements CompositeEntityLoader {
   public static final String EVENT_SUBSCRIPTIONS = "event_subscriptions";
   public static final String EXECUTIONS = "executions";
   public static final String VARIABLES = "variables";
-  
+
   public LoadedCompositeEntity getEntityById(CassandraPersistenceSession session, String id) {
     LoadedCompositeEntity loadedProcessInstance = new LoadedCompositeEntity();
-    
+
     Session s = session.getSession();
-    
+
     Row row = s.execute(select().all().from(TABLE_NAME).where(eq("id", id))).one();
     if(row == null) {
       return null;
     }
-    
+
     int version = row.getInt("version");
     String businessKey = row.getString("business_key");
 
     CassandraSerializer<ExecutionEntity> executionSerializer = session.getSerializer(ExecutionEntity.class);
     CassandraSerializer<EventSubscriptionEntity> eventSubscriptionSerializer = session.getSerializer(EventSubscriptionEntity.class);
     CassandraSerializer<VariableInstanceEntity> variableSerializer = session.getSerializer(VariableInstanceEntity.class);
-    
+
     // deserialize all executions
     Map<String, UDTValue> executionsMap = row.getMap(EXECUTIONS, String.class, UDTValue.class);
     Map<String, ExecutionEntity> executions = new HashMap<String, ExecutionEntity>();
@@ -51,11 +51,11 @@ public class ProcessInstanceLoader implements CompositeEntityLoader {
       if(executionEntity.isProcessInstanceExecution()) {
         loadedProcessInstance.setMainEntity(executionEntity);
       }
-      
+
     }
     loadedProcessInstance.put(EXECUTIONS, executions);
-    
-    // deserialize all event subscription    
+
+    // deserialize all event subscription
     Map<String, UDTValue> eventSubscriptionsMap = row.getMap(EVENT_SUBSCRIPTIONS, String.class, UDTValue.class);
     Map<String, EventSubscriptionEntity> eventSubscriptions = new HashMap<String, EventSubscriptionEntity>();
     for (UDTValue serializedEventSubscription : eventSubscriptionsMap.values()) {
@@ -63,8 +63,8 @@ public class ProcessInstanceLoader implements CompositeEntityLoader {
       eventSubscriptions.put(eventSubscriptionEntity.getId(), eventSubscriptionEntity);
     }
     loadedProcessInstance.put(EVENT_SUBSCRIPTIONS, eventSubscriptions);
-    
-    // deserialize all variables    
+
+    // deserialize all variables
     Map<String, UDTValue> variablesMap = row.getMap(VARIABLES, String.class, UDTValue.class);
     Map<String, VariableInstanceEntity> variables = new HashMap<String, VariableInstanceEntity>();
     for (UDTValue serializedVariable : variablesMap.values()) {
@@ -72,13 +72,13 @@ public class ProcessInstanceLoader implements CompositeEntityLoader {
       variables.put(variableEntity.getId(), variableEntity);
     }
     loadedProcessInstance.put(VARIABLES, variables);
-    
+
     reconstructEntityTree(loadedProcessInstance);
 
     ExecutionEntity processInstance= (ExecutionEntity) loadedProcessInstance.getPrimaryEntity();
     processInstance.setRevision(version);
     processInstance.setBusinessKey(businessKey);
-    
+
     ProcessInstanceBatch batch = new ProcessInstanceBatch((ExecutionEntity) loadedProcessInstance.getPrimaryEntity());
     session.addLockedBatch(loadedProcessInstance.getPrimaryEntity().getId(), batch);
 
@@ -92,7 +92,9 @@ public class ProcessInstanceLoader implements CompositeEntityLoader {
     Map<String, EventSubscriptionEntity> eventSubscriptions = (Map<String, EventSubscriptionEntity>) compositeEntity.getEmbeddedEntities().get(EVENT_SUBSCRIPTIONS);
     Map<String, VariableInstanceEntity> variables = (Map<String, VariableInstanceEntity>) compositeEntity.getEmbeddedEntities().get(VARIABLES);
 
-    processInstance.restoreProcessInstance(executions.values(), eventSubscriptions.values(), variables.values());
+    processInstance.restoreProcessInstance(executions.values(),
+        eventSubscriptions.values(),
+        variables.values());
   }
 
 }
