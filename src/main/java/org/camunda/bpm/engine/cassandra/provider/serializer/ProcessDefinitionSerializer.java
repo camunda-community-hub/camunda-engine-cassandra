@@ -29,4 +29,10 @@ public class ProcessDefinitionSerializer implements CassandraSerializer<ProcessD
     return entity;
   }
 
+  @Override
+  public ProcessDefinitionEntity copy(ProcessDefinitionEntity data) {
+    //TODO
+    throw new UnsupportedOperationException();
+  }
+
 }

@@ -107,6 +107,10 @@ public abstract class AbstractIndexHandler <T extends DbEntity> implements Index
     return getIndexValue(entity).equals(getIndexValue(indexValues));
   }
  
+  public boolean checkIndexMatch(T entity, T newEntity){
+    return getIndexValue(entity).equals(getIndexValue(newEntity));
+  }
+ 
   public static Set<String> crossCheckIndexes(Set<String> set1, Set<String> set2){
     List<Set<String>> list=new ArrayList<Set<String>>(2);
     list.add(set1);

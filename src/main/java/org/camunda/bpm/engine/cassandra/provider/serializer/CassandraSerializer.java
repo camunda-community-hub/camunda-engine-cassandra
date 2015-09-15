@@ -11,4 +11,5 @@ public interface CassandraSerializer<T extends DbEntity> {
   
   T read(GettableData data);
 
+  T copy(T data);
 }

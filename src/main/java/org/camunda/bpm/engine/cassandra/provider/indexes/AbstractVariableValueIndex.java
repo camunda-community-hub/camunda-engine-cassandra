@@ -37,10 +37,10 @@ public abstract class AbstractVariableValueIndex extends AbstractIndexHandler<Va
     if(entity.getLongValue()!=null){
       value=entity.getLongValue().toString();
     }
-    else if(entity.getDoubleValue()!=null){
+    if(entity.getDoubleValue()!=null){
       value=entity.getDoubleValue().toString();
     }
-    else if(entity.getTextValue()!=null){
+    if(entity.getTextValue()!=null){
       value=entity.getTextValue();
     }
     //not bothering with text2

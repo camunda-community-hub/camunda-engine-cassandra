@@ -25,4 +25,10 @@ public class ResourceEntitySerializer implements CassandraSerializer<ResourceEnt
     return resourceEntity;
   }
 
+  @Override
+  public ResourceEntity copy(ResourceEntity data) {
+    //TODO
+    throw new UnsupportedOperationException();
+  }
+
 }

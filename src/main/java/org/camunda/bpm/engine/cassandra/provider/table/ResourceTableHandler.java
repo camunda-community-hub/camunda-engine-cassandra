@@ -7,7 +7,7 @@ import com.datastax.driver.core.Session;
 
 public class ResourceTableHandler implements TableHandler {
   
-  public final static String TABLE_NAME = "CAM_RESOURCE";
+  public final static String TABLE_NAME = "cam_resource";
 
   protected final static String CREATE_TABLE_STMNT = "CREATE TABLE IF NOT EXISTS "+TABLE_NAME +" "
       + "(id text, "

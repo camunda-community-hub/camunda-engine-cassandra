@@ -6,6 +6,7 @@ import static org.camunda.bpm.engine.cassandra.provider.table.ProcessDefinitionT
 import java.util.HashMap;
 import java.util.Map;
 
+import org.camunda.bpm.engine.cassandra.cfg.CassandraProcessEngineConfiguration;
 import org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSession;
 import org.camunda.bpm.engine.cassandra.provider.indexes.IndexHandler;
 import org.camunda.bpm.engine.cassandra.provider.serializer.CassandraSerializer;
@@ -39,9 +40,18 @@ public class ProcessDefinitionOperations extends AbstractEntityOperationHandler<
   
   protected static Map<Class<?>, IndexHandler<ProcessDefinitionEntity>> indexHandlers = new HashMap<Class<?>, IndexHandler<ProcessDefinitionEntity>>();
 
+  public ProcessDefinitionOperations(CassandraPersistenceSession cassandraPersistenceSession) {
+  }
+
+  public static void prepare(CassandraProcessEngineConfiguration config) {
+      insertStatement = config.getSession().prepare(INSERT);
+      insertVersionIndexStatement = config.getSession().prepare(INSERT_IDX_VERSION);
+      deleteStatement = config.getSession().prepare(DELETE);
+      deleteVersionIndexStatement = config.getSession().prepare(DELETE_IDX_VERSION);	  
+  }
+  
   public void insert(CassandraPersistenceSession session, ProcessDefinitionEntity entity) {
     Session s = session.getSession();
-    ensurePrepared(s);
     
     CassandraSerializer<ProcessDefinitionEntity> serializer = session.getSerializer(ProcessDefinitionEntity.class);
    
@@ -62,7 +72,6 @@ public class ProcessDefinitionOperations extends AbstractEntityOperationHandler<
   }
 
   public void delete(CassandraPersistenceSession session, ProcessDefinitionEntity entity) {
-    ensurePrepared(session.getSession());
     session.addStatement(deleteStatement.bind(entity.getId()));
     session.addStatement(deleteVersionIndexStatement.bind(entity.getKey(), entity.getVersion()));    
 
@@ -72,7 +81,7 @@ public class ProcessDefinitionOperations extends AbstractEntityOperationHandler<
   }
 
   public void update(CassandraPersistenceSession session, ProcessDefinitionEntity entity) {
-    
+    throw new UnsupportedOperationException();   
   }
 
   protected Class<ProcessDefinitionEntity> getEntityType() {
@@ -83,17 +92,8 @@ public class ProcessDefinitionOperations extends AbstractEntityOperationHandler<
     return ProcessDefinitionTableHandler.TABLE_NAME;
   }
 
-  private synchronized void ensurePrepared(Session session){
-    if(!isInitialized){
-      insertStatement = session.prepare(INSERT);
-      insertVersionIndexStatement = session.prepare(INSERT_IDX_VERSION);
-      deleteStatement = session.prepare(DELETE);
-      deleteVersionIndexStatement = session.prepare(DELETE_IDX_VERSION);
-      isInitialized=true;
-    }
-  }
-
   public static IndexHandler<ProcessDefinitionEntity> getIndexHandler(Class<?> type){
     return indexHandlers.get(type);
   }
+
 }

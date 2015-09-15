@@ -7,7 +7,7 @@ import com.datastax.driver.core.Session;
 
 public class IndexTableHandler implements TableHandler {
 
-  public final static String INDEX_TABLE_NAME = "CAM_INDEX";
+  public final static String INDEX_TABLE_NAME = "cam_index";
 
   protected final static String CREATE_INDEX_TABLE = "CREATE TABLE IF NOT EXISTS "+INDEX_TABLE_NAME +" "
       + "(idx_name text, "

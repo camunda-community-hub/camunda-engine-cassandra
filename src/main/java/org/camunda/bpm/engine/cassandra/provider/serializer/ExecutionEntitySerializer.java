@@ -48,4 +48,10 @@ public class ExecutionEntitySerializer implements CassandraSerializer<ExecutionE
     return executionEntity;
   }
 
+  @Override
+  public ExecutionEntity copy(ExecutionEntity data) {
+    //TODO
+    throw new UnsupportedOperationException();
+  }
+
 }

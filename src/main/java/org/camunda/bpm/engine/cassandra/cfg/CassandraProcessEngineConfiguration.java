@@ -1,5 +1,7 @@
 package org.camunda.bpm.engine.cassandra.cfg;
 
+import org.camunda.bpm.engine.ProcessEngine;
+import org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSession;
 import org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSessionFactory;
 import org.camunda.bpm.engine.impl.cfg.StandaloneProcessEngineConfiguration;
 import org.camunda.bpm.engine.impl.persistence.StrongUuidGenerator;
@@ -16,6 +18,9 @@ public class CassandraProcessEngineConfiguration extends StandaloneProcessEngine
   protected Cluster cluster;
   protected Session session;
   protected String keyspace;
+  protected int jobShardSizeHours=1; //size of the job shard
+  protected int jobShardInitNumber=100; //how far to go back to find active shards on start-up 
+  protected int maxPriority=5; //maximum priority 
   protected int replicationFactor = 1;
 
   @Override
@@ -49,9 +54,16 @@ public class CassandraProcessEngineConfiguration extends StandaloneProcessEngine
       }
       
       session = cluster.connect(keyspace);
+      
     }
   }
-  
+
+  public ProcessEngine buildProcessEngine() {
+    super.buildProcessEngine();
+    CassandraPersistenceSession.staticInit(this); 
+    return processEngine;
+  }
+ 
   protected void initIdGenerator() {
     if(idGenerator == null) {
       idGenerator = new StrongUuidGenerator();
@@ -109,5 +121,29 @@ public class CassandraProcessEngineConfiguration extends StandaloneProcessEngine
   public int getReplicationFactor() {
     return replicationFactor;
   }
-  
+
+  public int getJobShardSizeHours() {
+    return jobShardSizeHours;
+  }
+
+  public void setJobShardSizeHours(int jobShardSizeHours) {
+    this.jobShardSizeHours = jobShardSizeHours;
+  }
+
+  public int getJobShardInitNumber() {
+    return jobShardInitNumber;
+  }
+
+  public void setJobShardInitNumber(int jobShardInitNumber) {
+    this.jobShardInitNumber = jobShardInitNumber;
+  }
+
+  public int getMaxPriority() {
+    return maxPriority;
+  }
+
+  public void setMaxPriority(int maxPriority) {
+    this.maxPriority = maxPriority;
+  }
+
 }

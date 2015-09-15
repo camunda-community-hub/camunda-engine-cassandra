@@ -7,8 +7,8 @@ import com.datastax.driver.core.Session;
 
 public class ProcessDefinitionTableHandler implements TableHandler {
   
-  public final static String TABLE_NAME = "CAM_PROC_DEF";
-  public final static String TABLE_NAME_IDX_VERSION = "CAM_PROC_DEF_IDX_VERSION";
+  public final static String TABLE_NAME = "cam_proc_def";
+  public final static String TABLE_NAME_IDX_VERSION = "cam_proc_def_idx_version";
 
   protected final static String CREATE_TABLE = "CREATE TABLE IF NOT EXISTS "+TABLE_NAME +" "
       + "(id text, "

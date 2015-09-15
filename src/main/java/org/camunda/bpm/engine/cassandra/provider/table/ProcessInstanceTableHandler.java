@@ -11,7 +11,7 @@ import com.datastax.driver.core.Session;
 
 public class ProcessInstanceTableHandler implements TableHandler {
 
-  public final static String TABLE_NAME = "CAM_PROC_INST";
+  public final static String TABLE_NAME = "cam_proc_inst";
 
   protected final static String CREATE_TABLE = "CREATE TABLE IF NOT EXISTS "+TABLE_NAME +" "
       + "(id text, "

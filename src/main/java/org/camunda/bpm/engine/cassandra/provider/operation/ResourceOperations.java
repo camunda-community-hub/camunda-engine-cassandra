@@ -2,6 +2,7 @@ package org.camunda.bpm.engine.cassandra.provider.operation;
 
 import static org.camunda.bpm.engine.cassandra.provider.table.ResourceTableHandler.TABLE_NAME;
 
+import org.camunda.bpm.engine.cassandra.cfg.CassandraProcessEngineConfiguration;
 import org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSession;
 import org.camunda.bpm.engine.cassandra.provider.serializer.CassandraSerializer;
 import org.camunda.bpm.engine.impl.persistence.entity.ResourceEntity;
@@ -15,6 +16,13 @@ public class ResourceOperations extends AbstractEntityOperationHandler<ResourceE
       + "values "
       + "(?, ?, ?, ?);";
   
+  public ResourceOperations(CassandraPersistenceSession cassandraPersistenceSession) {
+  }
+
+  public static void prepare(CassandraProcessEngineConfiguration config) {
+		// TODO - prepare all statements
+  }
+
   public void insert(CassandraPersistenceSession session, ResourceEntity entity) {
 
     Session s = session.getSession();
@@ -27,11 +35,11 @@ public class ResourceOperations extends AbstractEntityOperationHandler<ResourceE
   }
 
   public void delete(CassandraPersistenceSession session, ResourceEntity entity) {
-
+    throw new UnsupportedOperationException();
   }
 
   public void update(CassandraPersistenceSession session, ResourceEntity entity) {
-
+    throw new UnsupportedOperationException();
   }
 
   @Override

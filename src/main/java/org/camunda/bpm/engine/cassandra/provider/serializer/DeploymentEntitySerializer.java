@@ -23,4 +23,10 @@ public class DeploymentEntitySerializer implements CassandraSerializer<Deploymen
     return deploymentEntity;
   }
 
+  @Override
+  public DeploymentEntity copy(DeploymentEntity data) {
+    //TODO
+    throw new UnsupportedOperationException();
+  }
+
 }

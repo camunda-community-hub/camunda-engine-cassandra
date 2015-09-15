@@ -6,8 +6,8 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.put;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.camunda.bpm.engine.cassandra.cfg.CassandraProcessEngineConfiguration;
 import org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSession;
-import org.camunda.bpm.engine.cassandra.provider.indexes.AbstractVariableValueIndex;
 import org.camunda.bpm.engine.cassandra.provider.indexes.ExecutionIdByVariableValueIndex;
 import org.camunda.bpm.engine.cassandra.provider.indexes.IndexHandler;
 import org.camunda.bpm.engine.cassandra.provider.indexes.ProcessIdByProcessVariableValueIndex;
@@ -15,6 +15,8 @@ import org.camunda.bpm.engine.cassandra.provider.indexes.ProcessIdByVariableIdIn
 import org.camunda.bpm.engine.cassandra.provider.serializer.CassandraSerializer;
 import org.camunda.bpm.engine.cassandra.provider.table.ProcessInstanceTableHandler;
 import org.camunda.bpm.engine.cassandra.provider.type.UDTypeHandler;
+import org.camunda.bpm.engine.impl.db.DbEntity;
+import org.camunda.bpm.engine.impl.db.EntityLoadListener;
 import org.camunda.bpm.engine.impl.persistence.entity.VariableInstanceEntity;
 
 import com.datastax.driver.core.Session;
@@ -22,7 +24,7 @@ import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.UDTValue;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 
-public class VariableEntityOperations implements EntityOperationHandler<VariableInstanceEntity>{
+public class VariableEntityOperations implements EntityOperationHandler<VariableInstanceEntity>, EntityLoadListener {
   protected static Map<Class<?>, IndexHandler<VariableInstanceEntity>> indexHandlers = new HashMap<Class<?>, IndexHandler<VariableInstanceEntity>>();
 
   private Map<String, VariableInstanceEntity> varValuesCache=new HashMap<String,VariableInstanceEntity>();
@@ -33,6 +35,14 @@ public class VariableEntityOperations implements EntityOperationHandler<Variable
     indexHandlers.put(ProcessIdByProcessVariableValueIndex.class, new ProcessIdByProcessVariableValueIndex());
   }
   
+
+  public VariableEntityOperations(CassandraPersistenceSession cassandraPersistenceSession) {
+    cassandraPersistenceSession.addEntityLoadListener(this);
+  }
+
+  public static void prepare(CassandraProcessEngineConfiguration config) {
+		// TODO - prepare all statements
+  }
 
   public void insert(CassandraPersistenceSession session, VariableInstanceEntity entity) {
     session.addStatement(createUpdateStatement(session, entity));
@@ -47,18 +57,19 @@ public class VariableEntityOperations implements EntityOperationHandler<Variable
       .from(ProcessInstanceTableHandler.TABLE_NAME).where(eq("id", entity.getProcessInstanceId())), entity.getProcessInstanceId());
     
     for(IndexHandler<VariableInstanceEntity> index:indexHandlers.values()){
-      session.addIndexStatement(index.getDeleteStatement(session,varValuesCache.get(entity.getId())), entity.getProcessInstanceId());  
+      session.addIndexStatement(index.getDeleteStatement(session,getCachedEntity(entity)), entity.getProcessInstanceId());  
     }
-    varValuesCache.remove(entity.getId());
+//    varValuesCache.remove(entity.getId());
   }
 
   public void update(CassandraPersistenceSession session, VariableInstanceEntity entity) {
     session.addStatement(createUpdateStatement(session, entity), entity.getProcessInstanceId());
 
     for(IndexHandler<VariableInstanceEntity> index:indexHandlers.values()){
-      session.addIndexStatement(index.getInsertStatement(session,entity), entity.getProcessInstanceId());  
-      if(index instanceof AbstractVariableValueIndex){
-        session.addIndexStatement(index.getDeleteStatement(session,varValuesCache.get(entity.getId())), entity.getProcessInstanceId());
+      VariableInstanceEntity oldEntity = getCachedEntity(entity);
+      if(!index.checkIndexMatch(oldEntity, entity)){
+        session.addIndexStatement(index.getDeleteStatement(session,oldEntity), entity.getProcessInstanceId());
+        session.addIndexStatement(index.getInsertStatement(session,entity), entity.getProcessInstanceId());  
       }
     }
     updateVariableCache(entity);
@@ -68,7 +79,7 @@ public class VariableEntityOperations implements EntityOperationHandler<Variable
     Session s = session.getSession();
 
     UDTypeHandler typeHandler = session.getTypeHander(VariableInstanceEntity.class);
-    CassandraSerializer<VariableInstanceEntity> serializer = session.getSerializer(VariableInstanceEntity.class);
+    CassandraSerializer<VariableInstanceEntity> serializer = CassandraPersistenceSession.getSerializer(VariableInstanceEntity.class);
 
     UDTValue value = typeHandler.createValue(s);
     serializer.write(value, entity);
@@ -95,26 +106,26 @@ public class VariableEntityOperations implements EntityOperationHandler<Variable
     return indexHandlers.get(type);
   }
   
-  public void onCompositeLoad(LoadedCompositeEntity composite){
-    //store variable values in a local cache to ensure they can be deleted    
-    //TODO - replace this quick hack with a better solution once the indexing approach is more finalised
-    @SuppressWarnings("unchecked")
-    Map<String, VariableInstanceEntity> variables=(Map<String, VariableInstanceEntity>) composite.get(ProcessInstanceLoader.VARIABLES);
-    for(String id:variables.keySet()){
-      updateVariableCache(variables.get(id));
-    }
-  }
-  
   private void updateVariableCache(VariableInstanceEntity variable){
-    VariableInstanceEntity copy= new VariableInstanceEntity();
-    //just copy relevant fields
-    copy.setId(variable.getId());
-    copy.setExecutionId(variable.getExecutionId());
-    copy.setProcessInstanceId(variable.getProcessInstanceId());
-    copy.setName(variable.getName());
-    copy.setValue(variable.getTypedValue());
-    copy.setTaskId(variable.getTaskId());
+    CassandraSerializer<VariableInstanceEntity> serializer = CassandraPersistenceSession.getSerializer(VariableInstanceEntity.class);
+    VariableInstanceEntity copy= serializer.copy(variable);
     varValuesCache.put(variable.getId(), copy);    
   }
+
+  @Override
+  public void onEntityLoaded(DbEntity entity) {
+    if(entity instanceof VariableInstanceEntity){
+      updateVariableCache((VariableInstanceEntity) entity);
+    }
+  }
+
+  private VariableInstanceEntity getCachedEntity(VariableInstanceEntity entity){
+    VariableInstanceEntity oldEntity = varValuesCache.get(entity.getId());
+    if(oldEntity==null){
+      throw new RuntimeException("Inconsistent state, entity needs to be loaded into command context before it can be updated.");
+    }
+    return oldEntity;
+  }
+
 }
 

@@ -6,6 +6,7 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.put;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.camunda.bpm.engine.cassandra.cfg.CassandraProcessEngineConfiguration;
 import org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSession;
 import org.camunda.bpm.engine.cassandra.provider.indexes.ExecutionIdByProcessIdIndex;
 import org.camunda.bpm.engine.cassandra.provider.indexes.IndexHandler;
@@ -28,12 +29,20 @@ public class ExecutionEntityOperations implements EntityOperationHandler<Executi
   
   protected static Map<Class<?>, IndexHandler<ExecutionEntity>> indexHandlers = new HashMap<Class<?>, IndexHandler<ExecutionEntity>>();
 
+  //Indexes are all immutable (e.g. index value is not going to change), so no need to cache
   static {
     indexHandlers.put(ProcessIdByBusinessKeyIndex.class, new ProcessIdByBusinessKeyIndex());
     indexHandlers.put(ProcessIdByExecutionIdIndex.class, new ProcessIdByExecutionIdIndex());
     indexHandlers.put(ExecutionIdByProcessIdIndex.class, new ExecutionIdByProcessIdIndex());
   }
   
+  public ExecutionEntityOperations(CassandraPersistenceSession cassandraPersistenceSession) {
+  }
+
+  public static void prepare(CassandraProcessEngineConfiguration config) {
+		// TODO - prepare all statements
+  }
+
   public void insert(CassandraPersistenceSession session, ExecutionEntity entity) {
     
     Session s = session.getSession();
@@ -113,4 +122,5 @@ public class ExecutionEntityOperations implements EntityOperationHandler<Executi
   public static IndexHandler<ExecutionEntity> getIndexHandler(Class<?> type){
     return indexHandlers.get(type);
   }
+
 }

@@ -39,4 +39,10 @@ public class EventSubscriptionSerializer implements CassandraSerializer<EventSub
     throw new RuntimeException("Unsupported type '"+eventType+"'.");
   }
 
+  @Override
+  public EventSubscriptionEntity copy(EventSubscriptionEntity data) {
+    //TODO
+    throw new UnsupportedOperationException();
+  }
+
 }

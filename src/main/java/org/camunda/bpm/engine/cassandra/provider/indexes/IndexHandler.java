@@ -19,5 +19,6 @@ public interface IndexHandler <T extends DbEntity>{
   public Statement getInsertStatement(CassandraPersistenceSession cassandraPersistenceSession, T entity);
   public Statement getDeleteStatement(CassandraPersistenceSession cassandraPersistenceSession, T entity);
   public boolean checkIndexMatch(T entity, String ... indexValues);
+  public boolean checkIndexMatch(T entity, T newEntity);
   public boolean isUnique();
 }

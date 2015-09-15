@@ -6,7 +6,7 @@ import java.util.List;
 
 public class DeploymentTableHandler extends AbstractTableHandler {
   
-  public final static String TABLE_NAME = "CAM_DEPLOYMENT";
+  public final static String TABLE_NAME = "cam_deployment";
 
   protected final static String CREATE_TABLE_STMNT = "CREATE TABLE IF NOT EXISTS "+TABLE_NAME +" "
       + "(id text, "

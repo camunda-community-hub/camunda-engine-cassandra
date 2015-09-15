@@ -6,6 +6,7 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.put;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.camunda.bpm.engine.cassandra.cfg.CassandraProcessEngineConfiguration;
 import org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSession;
 import org.camunda.bpm.engine.cassandra.provider.indexes.ExecutionIdByEventTypeAndNameIndex;
 import org.camunda.bpm.engine.cassandra.provider.indexes.IndexHandler;
@@ -22,11 +23,19 @@ import com.datastax.driver.core.querybuilder.QueryBuilder;
 
 public class EventSubscriptionOperations implements EntityOperationHandler<EventSubscriptionEntity> {
   protected static Map<Class<?>, IndexHandler<EventSubscriptionEntity>> indexHandlers = new HashMap<Class<?>, IndexHandler<EventSubscriptionEntity>>();
+  //Indexes are all immutable (e.g. index value is not going to change for a given entity), so no need to cache
   static {
     indexHandlers.put(ExecutionIdByEventTypeAndNameIndex.class, new ExecutionIdByEventTypeAndNameIndex());
     indexHandlers.put(ProcessIdByEventSubscriptionIdIndex.class, new ProcessIdByEventSubscriptionIdIndex());
   }
   
+  public EventSubscriptionOperations(CassandraPersistenceSession cassandraPersistenceSession) {
+  }
+
+  public static void prepare(CassandraProcessEngineConfiguration config) {
+    // TODO - prepare all statements
+  }
+
   public void insert(CassandraPersistenceSession session, EventSubscriptionEntity entity) {
     session.addStatement(createUpdateStatement(session, entity));
     
@@ -81,4 +90,5 @@ public class EventSubscriptionOperations implements EntityOperationHandler<Event
   public static IndexHandler<EventSubscriptionEntity> getIndexHandler(Class<?> type){
     return indexHandlers.get(type);
   }
+
 }

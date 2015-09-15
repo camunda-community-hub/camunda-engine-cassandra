@@ -2,6 +2,7 @@ package org.camunda.bpm.engine.cassandra.provider.operation;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 
+import org.camunda.bpm.engine.cassandra.cfg.CassandraProcessEngineConfiguration;
 import org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSession;
 import org.camunda.bpm.engine.cassandra.provider.serializer.CassandraSerializer;
 import org.camunda.bpm.engine.cassandra.provider.table.DeploymentTableHandler;
@@ -17,6 +18,13 @@ public class DeploymentOperations extends AbstractEntityOperationHandler<Deploym
       + "values "
       + "(?, ?, ?);";
   
+  public DeploymentOperations(CassandraPersistenceSession cassandraPersistenceSession) {
+  }
+
+  public static void prepare(CassandraProcessEngineConfiguration config) {
+		// TODO - prepare all statements
+  }
+
   public void insert(CassandraPersistenceSession session, DeploymentEntity entity) {
 
     Session s = session.getSession();
@@ -47,4 +55,5 @@ public class DeploymentOperations extends AbstractEntityOperationHandler<Deploym
   protected String getTableName() {
     return DeploymentTableHandler.TABLE_NAME;
   }
+
 }
