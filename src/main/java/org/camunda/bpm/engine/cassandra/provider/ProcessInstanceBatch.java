@@ -8,6 +8,7 @@ import org.camunda.bpm.engine.cassandra.provider.table.ProcessInstanceTableHandl
 import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity;
 
 import com.datastax.driver.core.BatchStatement;
+import com.datastax.driver.core.Statement;
 
 public class ProcessInstanceBatch extends LockedBatch<ExecutionEntity> {
   
@@ -16,10 +17,12 @@ public class ProcessInstanceBatch extends LockedBatch<ExecutionEntity> {
   }
 
   protected void addLockStatement(BatchStatement batch) {
-    batch.add(update(ProcessInstanceTableHandler.TABLE_NAME)
+    Statement st=update(ProcessInstanceTableHandler.TABLE_NAME)
         .with(set("version", entity.getRevisionNext()))
         .where(eq("id", entity.getId()))
-        .onlyIf(eq("version", entity.getRevision())));
+        .onlyIf(eq("version", entity.getRevision()));
+    batch.add(st);
+    setVersion( Integer.toString(entity.getRevision()));
   }
   
 }

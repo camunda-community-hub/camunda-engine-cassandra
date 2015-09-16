@@ -65,11 +65,10 @@ public class VariableEntityOperations implements EntityOperationHandler<Variable
   public void update(CassandraPersistenceSession session, VariableInstanceEntity entity) {
     session.addStatement(createUpdateStatement(session, entity), entity.getProcessInstanceId());
 
+    VariableInstanceEntity oldEntity = getCachedEntity(entity);
     for(IndexHandler<VariableInstanceEntity> index:indexHandlers.values()){
-      VariableInstanceEntity oldEntity = getCachedEntity(entity);
-      if(!index.checkIndexMatch(oldEntity, entity)){
-        session.addIndexStatement(index.getDeleteStatement(session,oldEntity), entity.getProcessInstanceId());
-        session.addIndexStatement(index.getInsertStatement(session,entity), entity.getProcessInstanceId());  
+      for(Statement st:index.getUpdateStatements(session, entity, oldEntity)){
+        session.addIndexStatement(st, entity.getProcessInstanceId());
       }
     }
     updateVariableCache(entity);
@@ -91,7 +90,7 @@ public class VariableEntityOperations implements EntityOperationHandler<Variable
 
   @Override
   public VariableInstanceEntity getEntityById(CassandraPersistenceSession session, String id) {    
-    String procId = indexHandlers.get(ProcessIdByVariableIdIndex.class).getUniqueValue(session, id);
+    String procId = indexHandlers.get(ProcessIdByVariableIdIndex.class).getUniqueValue(null,session, id);
     if(procId==null){
       return null;
     }

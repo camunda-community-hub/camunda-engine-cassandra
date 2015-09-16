@@ -76,7 +76,7 @@ public class EventSubscriptionOperations implements EntityOperationHandler<Event
   }
 
   public EventSubscriptionEntity getEntityById(CassandraPersistenceSession session, String id) {
-    String procId = indexHandlers.get(ProcessIdByEventSubscriptionIdIndex.class).getUniqueValue(session, id);
+    String procId = indexHandlers.get(ProcessIdByEventSubscriptionIdIndex.class).getUniqueValue(null,session, id);
     if(procId==null){
       return null;
     }

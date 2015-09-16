@@ -12,33 +12,33 @@
  */
 package org.camunda.bpm.engine.cassandra.provider.indexes;
 
-import org.camunda.bpm.engine.impl.persistence.entity.EventSubscriptionEntity;
+import org.camunda.bpm.engine.impl.persistence.entity.JobDefinitionEntity;
 
 /**
  * @author Natalia Levine
  *
- * @created 12/07/2015
+ * @created 17/09/2015
  */
-public class ProcessIdByEventSubscriptionIdIndex extends AbstractIndexHandler<EventSubscriptionEntity> {
+public class JobDefinitionIdByProcessDefinitionIdIndex extends AbstractIndexHandler<JobDefinitionEntity> {
 
   @Override
   protected String getIndexName() {
-    return IndexNames.PROCESS_ID_BY_EVENT_SUBSCRIPTION_ID;
+    return IndexNames.JOB_DEF_ID_BY_PROC_DEF_ID;
   }
 
   @Override
   public boolean isUnique() {
-    return true;
+    return false;
   }
 
   @Override
-  protected String getIndexValue(EventSubscriptionEntity entity) {
+  protected String getIndexValue(JobDefinitionEntity entity) {
+    return entity.getProcessDefinitionId();
+  }
+
+  @Override
+  protected String getValue(JobDefinitionEntity entity) {
     return entity.getId();
-  }
-
-  @Override
-  protected String getValue(EventSubscriptionEntity entity) {
-    return entity.getProcessInstanceId();
   }
 
 }

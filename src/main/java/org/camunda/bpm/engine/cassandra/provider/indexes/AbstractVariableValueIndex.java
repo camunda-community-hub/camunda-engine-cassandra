@@ -1,3 +1,15 @@
+/* Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.camunda.bpm.engine.cassandra.provider.indexes;
 
 import java.util.Collections;
@@ -24,7 +36,7 @@ public abstract class AbstractVariableValueIndex extends AbstractIndexHandler<Va
 
   @Override
   protected String getIndexValue(VariableInstanceEntity entity) {
-    return createIndexValue(entity.getName(), getVariableValue(entity));
+    return IndexUtils.createIndexValue(entity.getName(), getVariableValue(entity));
   }
   
   private String getVariableValue(VariableInstanceEntity entity){
@@ -59,7 +71,7 @@ public abstract class AbstractVariableValueIndex extends AbstractIndexHandler<Va
     if(indexValues.length != 2){
       throw new IllegalArgumentException("ExecutionIdByVariableValueIndex requires variable name and variable value");
     }
-    return createIndexValue(indexValues);
+    return IndexUtils.createIndexValue(indexValues);
   }
 
   @SuppressWarnings("unchecked")
@@ -74,7 +86,7 @@ public abstract class AbstractVariableValueIndex extends AbstractIndexHandler<Va
     if(typedValue.getType().isPrimitiveValueType() && !(typedValue.getType() instanceof BytesTypeImpl)){
       VariableInstanceEntity tempEntity = new VariableInstanceEntity();
       serializer.writeValue(typedValue, tempEntity);
-      return getValues(cassandraPersistenceSession, variableName, getVariableValue(tempEntity));
+      return getValues(null,cassandraPersistenceSession, variableName, getVariableValue(tempEntity));
     }
     return Collections.emptyList();
   }

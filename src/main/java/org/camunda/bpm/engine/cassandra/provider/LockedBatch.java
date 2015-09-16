@@ -11,6 +11,8 @@ public abstract class LockedBatch<T extends DbEntity> {
   
   protected BatchStatement batch = new BatchStatement();
   protected BatchStatement indexBatch = null;
+  protected String version = null;
+  
 
   protected boolean shouldNotLock = false;
   
@@ -19,7 +21,7 @@ public abstract class LockedBatch<T extends DbEntity> {
   }
   
   public BatchStatement getBatch() {
-    if(!shouldNotLock) {
+    if(!shouldNotLock && !isEmpty()) {
       addLockStatement(batch);
     }
     return batch;
@@ -49,5 +51,13 @@ public abstract class LockedBatch<T extends DbEntity> {
   public BatchStatement getIndexBatch() {
     return indexBatch;
   }
-  
+
+  public String getVersion() {
+    return version;
+  }
+
+  public void setVersion(String version) {
+    this.version = version;
+  }
+
 }

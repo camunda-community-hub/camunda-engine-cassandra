@@ -10,35 +10,50 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.camunda.bpm.engine.cassandra.provider.indexes;
 
-import org.camunda.bpm.engine.impl.persistence.entity.EventSubscriptionEntity;
+import java.util.Date;
+
+import org.camunda.bpm.engine.cassandra.provider.table.JobEntityKey;
+import org.camunda.bpm.engine.impl.persistence.entity.JobEntity;
 
 /**
  * @author Natalia Levine
  *
- * @created 12/07/2015
+ * @created 16/09/2015
  */
-public class ProcessIdByEventSubscriptionIdIndex extends AbstractIndexHandler<EventSubscriptionEntity> {
+public class ExclusiveJobsByLockExpiryIndex extends AbstractOrderedIndexHandler<JobEntity> {
 
   @Override
   protected String getIndexName() {
-    return IndexNames.PROCESS_ID_BY_EVENT_SUBSCRIPTION_ID;
+     return IndexNames.EXCLUSIVE_JOBS_BY_LOCK_TIME;
   }
 
   @Override
   public boolean isUnique() {
-    return true;
+    return false;
   }
 
   @Override
-  protected String getIndexValue(EventSubscriptionEntity entity) {
+  protected String getValue(JobEntity entity) {
+    //only index locked exclusive entities
+    if(!entity.isExclusive() || entity.getLockExpirationTime()==null ||
+        entity.getProcessInstanceId()==null){
+      return null;
+    }
+   // JobEntityKey key = new JobEntityKey(entity);
+   // return key.toJsonString();
     return entity.getId();
   }
 
   @Override
-  protected String getValue(EventSubscriptionEntity entity) {
+  protected String getPartitionId(JobEntity entity) {
     return entity.getProcessInstanceId();
   }
 
+  @Override
+  protected Date getOrderBy(JobEntity entity) {
+    return entity.getLockExpirationTime();
+  }
 }

@@ -19,8 +19,8 @@ public class CassandraProcessEngineConfiguration extends StandaloneProcessEngine
   protected Session session;
   protected String keyspace;
   protected int jobShardSizeHours=1; //size of the job shard
-  protected int jobShardInitNumber=100; //how far to go back to find active shards on start-up 
-  protected int maxPriority=5; //maximum priority 
+  protected int jobShardInitNumber=10; //how far to go back to find active shards on start-up 
+  //protected int maxPriority=5; //maximum priority 
   protected int replicationFactor = 1;
 
   @Override
@@ -137,7 +137,7 @@ public class CassandraProcessEngineConfiguration extends StandaloneProcessEngine
   public void setJobShardInitNumber(int jobShardInitNumber) {
     this.jobShardInitNumber = jobShardInitNumber;
   }
-
+/*
   public int getMaxPriority() {
     return maxPriority;
   }
@@ -145,5 +145,5 @@ public class CassandraProcessEngineConfiguration extends StandaloneProcessEngine
   public void setMaxPriority(int maxPriority) {
     this.maxPriority = maxPriority;
   }
-
+*/
 }

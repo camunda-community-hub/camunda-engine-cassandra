@@ -18,15 +18,21 @@ import org.camunda.bpm.engine.impl.test.PluggableProcessEngineTestCase;
 import org.camunda.bpm.engine.runtime.ProcessInstance;
 import org.camunda.bpm.engine.test.Deployment;
 
+/**
+ * @author Natalia Levine
+ *
+ * @created 15/09/2015
+ */
 public class JobExecutorTest extends PluggableProcessEngineTestCase {
 
   @Deployment(resources = {"org/camunda/bpm/engine/cassandra/asynch-test.bpmn"})
   public void testParallelExecution() throws InterruptedException {
 	  JobExecutor jobExecutor = processEngineConfiguration.getJobExecutor();
 	  try{
-		jobExecutor.start();
+	    jobExecutor.start();
 	    ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("test");
 	    waitForJobExecutorToProcessAllJobs(20000);
+	    assertProcessEnded(processInstance.getId());
 	  }
 	  finally 
 	  {

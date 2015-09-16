@@ -18,20 +18,21 @@ import java.util.List;
 import com.datastax.driver.core.Session;
 
 /**
- * @author Natalia Levine
+ * @author Natalia
  *
- * @created 14/07/2015
+ * @date 16/09/2015
  */
+public class OrderedIndexTableHandler implements TableHandler {
 
-public class IndexTableHandler implements TableHandler {
+  public final static String INDEX_TABLE_NAME = "cam_ordered_index";
 
-  public final static String INDEX_TABLE_NAME = "cam_index";
-
-  protected final static String CREATE_INDEX_TABLE = "CREATE TABLE IF NOT EXISTS "+INDEX_TABLE_NAME +" "
-      + "(idx_name text, "
-      + "idx_value text, "
-      + "val text, "
-      + "PRIMARY KEY ((idx_name, idx_value), val));";
+  protected final String CREATE_INDEX_TABLE = "CREATE TABLE IF NOT EXISTS "+INDEX_TABLE_NAME +" "
+      + "(idx_name text, " //name of index
+      + "part_id text, " //partition id, ordered indexes have to be partitioned
+      + "order_by timestamp, " //index is ordered by this time
+      + "val text, " //the object we are indexing
+      + "PRIMARY KEY ((idx_name, part_id), order_by, val) ) "
+      + "WITH CLUSTERING ORDER BY (order_by ASC);";
   
   protected final static String DROP_INDEX_TABLE = "DROP TABLE IF EXISTS "+INDEX_TABLE_NAME+";";
     
@@ -46,4 +47,5 @@ public class IndexTableHandler implements TableHandler {
   public void dropTable(Session s) {
     s.execute(DROP_INDEX_TABLE);
   }
+  
 }

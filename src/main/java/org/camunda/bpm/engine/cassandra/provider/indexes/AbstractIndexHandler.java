@@ -1,16 +1,30 @@
+/* Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.camunda.bpm.engine.cassandra.provider.indexes;
 
-import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.insertInto;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.delete;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.insertInto;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
 
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.logging.Logger;
 
+import org.camunda.bpm.engine.cassandra.cfg.CassandraProcessEngineConfiguration;
 import org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSession;
 import org.camunda.bpm.engine.cassandra.provider.table.IndexTableHandler;
 import org.camunda.bpm.engine.impl.db.DbEntity;
@@ -37,16 +51,14 @@ public abstract class AbstractIndexHandler <T extends DbEntity> implements Index
   private static PreparedStatement deleteStatement=null;
   private static PreparedStatement deleteUniqueStatement=null;
   private static PreparedStatement selectStatement=null;
-  private static boolean isInitialized=false;
     
   @Override
-  public String getUniqueValue(CassandraPersistenceSession cassandraPersistenceSession, String ... indexValues){
+  public String getUniqueValue(Map<String, Object> params, CassandraPersistenceSession cassandraPersistenceSession, String ... indexValues){
     if(!isUnique()){
       throw new UnsupportedOperationException("Index "+getIndexName()+" is not unique.");
     }
     
     Session s = cassandraPersistenceSession.getSession();
-    ensurePrepared(s);
     List<Row> rows = s.execute(selectStatement.bind(getIndexName(),getIndexValue(indexValues))).all();
         
     if(rows == null || rows.size()==0) {
@@ -59,9 +71,8 @@ public abstract class AbstractIndexHandler <T extends DbEntity> implements Index
   }
 
   @Override
-  public List<String> getValues(CassandraPersistenceSession cassandraPersistenceSession, String ... indexValues) {
+  public List<String> getValues(Map<String, Object> params, CassandraPersistenceSession cassandraPersistenceSession, String ... indexValues) {
     Session s = cassandraPersistenceSession.getSession();
-    ensurePrepared(s);
     List<Row> rows = s.execute(selectStatement.bind(getIndexName(), getIndexValue(indexValues))).all();
     List<String> result = new ArrayList<String>();
     for(Row row:rows){
@@ -78,7 +89,6 @@ public abstract class AbstractIndexHandler <T extends DbEntity> implements Index
       return null;
     }
     
-    ensurePrepared(cassandraPersistenceSession.getSession());   
     return insertStatement.bind(getIndexName(), getIndexValue(entity), getValue(entity));
   }
 
@@ -89,8 +99,6 @@ public abstract class AbstractIndexHandler <T extends DbEntity> implements Index
       return null;
     }
     
-    ensurePrepared(cassandraPersistenceSession.getSession());
-
     if(isUnique()){
       return deleteUniqueStatement.bind(getIndexName(),indexValue);
     }
@@ -102,7 +110,16 @@ public abstract class AbstractIndexHandler <T extends DbEntity> implements Index
       return deleteStatement.bind(getIndexName(),indexValue,value);
     }
   }
-  
+
+  @Override
+  public List<Statement> getUpdateStatements(CassandraPersistenceSession cassandraPersistenceSession, T entity, T oldEntity){
+    if(!checkIndexMatch(oldEntity, entity)){
+      return Arrays.asList(getDeleteStatement(cassandraPersistenceSession,oldEntity),
+            getInsertStatement(cassandraPersistenceSession,entity));  
+    }
+    return Collections.emptyList();
+  }
+ 
   public boolean checkIndexMatch(T entity, String ... indexValues){
     return getIndexValue(entity).equals(getIndexValue(indexValues));
   }
@@ -111,98 +128,35 @@ public abstract class AbstractIndexHandler <T extends DbEntity> implements Index
     return getIndexValue(entity).equals(getIndexValue(newEntity));
   }
  
-  public static Set<String> crossCheckIndexes(Set<String> set1, Set<String> set2){
-    List<Set<String>> list=new ArrayList<Set<String>>(2);
-    list.add(set1);
-    list.add(set2);
-    return crossCheckIndexes(list);
-  }
-  
-  public static Set<String> crossCheckIndexes(List<Set<String>> sets){
-    HashSet<String> result = new HashSet<String>();
-    if(sets==null || sets.size()==0){
-      return result;
-    }
-    if(sets.size()==1){
-      return sets.get(0);
-    }
-    
-    int minSize=sets.get(0).size();
-    int index=0;
-    for(int i=1;i<sets.size();i++){
-      if(sets.get(i).size()<minSize){
-        minSize=sets.get(i).size();
-        index=i;
-      }
-    }
-
-    for(String key: sets.get(index)){
-      boolean match=true;
-      for(int i=0; i < sets.size() && i != index; i++){
-        if(!sets.get(i).contains(key)){
-          match=false;
-          break;
-        }
-      }
-      if(match){
-        result.add(key);
-      }
-    }
-    
-    return result;
-  }
-
-  
   protected String getIndexValue(String... indexValues) {
     if(indexValues.length > 1){
       throw new IllegalArgumentException("This index supports only one index value.");
     }
-    return createIndexValue(indexValues);
-  }
-  
-  protected String createIndexValue(String... indexValues) {
-    if(indexValues==null || indexValues.length==0){
-      throw new IllegalArgumentException("Please supply at least one index value to use an index.");
-    }
-    
-    if(indexValues.length==1){
-      return indexValues[0];
-    }
-    
-    StringBuffer buf=new StringBuffer();
-    buf.append(indexValues[0]);
-    for(int i=1;i<indexValues.length;i++){
-      buf.append("_").append(indexValues[i]);
-    }
-    return buf.toString();
+    return IndexUtils.createIndexValue(indexValues);
   }
 
-  
-  private synchronized void ensurePrepared(Session s) {
-    if(!isInitialized){
-      selectStatement = s.prepare(select("val")
-          .from(IndexTableHandler.INDEX_TABLE_NAME)
-          .where(eq("idx_name", QueryBuilder.bindMarker()))
-          .and(eq("idx_value", QueryBuilder.bindMarker())));
-      
-      insertStatement = s.prepare(insertInto(IndexTableHandler.INDEX_TABLE_NAME)
-          .value("idx_name", QueryBuilder.bindMarker())
-          .value("idx_value",QueryBuilder.bindMarker())
-          .value("val",QueryBuilder.bindMarker()));
-      
-      deleteStatement = s.prepare(delete().all()
-          .from(IndexTableHandler.INDEX_TABLE_NAME)
-          .where(eq("idx_name", QueryBuilder.bindMarker()))
-          .and(eq("idx_value",QueryBuilder.bindMarker()))
-          .and(eq("val",QueryBuilder.bindMarker())));
-      
-      deleteUniqueStatement = s.prepare(delete().all()
-          .from(IndexTableHandler.INDEX_TABLE_NAME)
-          .where(eq("idx_name", QueryBuilder.bindMarker()))
-          .and(eq("idx_value",QueryBuilder.bindMarker())));
-      
-      isInitialized=true;
-    }
+  public static void prepare(CassandraProcessEngineConfiguration config) {
+    selectStatement = config.getSession().prepare(select("val")
+        .from(IndexTableHandler.INDEX_TABLE_NAME)
+        .where(eq("idx_name", QueryBuilder.bindMarker()))
+        .and(eq("idx_value", QueryBuilder.bindMarker())));
+    
+    insertStatement = config.getSession().prepare(insertInto(IndexTableHandler.INDEX_TABLE_NAME)
+        .value("idx_name", QueryBuilder.bindMarker())
+        .value("idx_value",QueryBuilder.bindMarker())
+        .value("val",QueryBuilder.bindMarker()));
+    
+    deleteStatement = config.getSession().prepare(delete().all()
+        .from(IndexTableHandler.INDEX_TABLE_NAME)
+        .where(eq("idx_name", QueryBuilder.bindMarker()))
+        .and(eq("idx_value",QueryBuilder.bindMarker()))
+        .and(eq("val",QueryBuilder.bindMarker())));
+    
+    deleteUniqueStatement = config.getSession().prepare(delete().all()
+        .from(IndexTableHandler.INDEX_TABLE_NAME)
+        .where(eq("idx_name", QueryBuilder.bindMarker()))
+        .and(eq("idx_value",QueryBuilder.bindMarker())));
+   
   }
   
 }

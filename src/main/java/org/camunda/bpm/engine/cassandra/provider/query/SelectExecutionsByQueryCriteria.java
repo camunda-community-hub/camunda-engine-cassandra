@@ -17,6 +17,7 @@ import org.camunda.bpm.engine.cassandra.provider.indexes.AbstractIndexHandler;
 import org.camunda.bpm.engine.cassandra.provider.indexes.ExecutionIdByEventTypeAndNameIndex;
 import org.camunda.bpm.engine.cassandra.provider.indexes.ExecutionIdByProcessIdIndex;
 import org.camunda.bpm.engine.cassandra.provider.indexes.ExecutionIdByVariableValueIndex;
+import org.camunda.bpm.engine.cassandra.provider.indexes.IndexUtils;
 import org.camunda.bpm.engine.cassandra.provider.indexes.ProcessIdByBusinessKeyIndex;
 import org.camunda.bpm.engine.cassandra.provider.indexes.ProcessIdByProcessVariableValueIndex;
 import org.camunda.bpm.engine.cassandra.provider.operation.EventSubscriptionOperations;
@@ -51,7 +52,7 @@ public class SelectExecutionsByQueryCriteria implements SelectListQueryHandler<E
     String queryProcessId = executionQuery.getProcessInstanceId();
     if(executionQuery.getBusinessKey() != null){
       queryProcessId = ExecutionEntityOperations.getIndexHandler(ProcessIdByBusinessKeyIndex.class)
-          .getUniqueValue(session, executionQuery.getBusinessKey());
+          .getUniqueValue(null,session, executionQuery.getBusinessKey());
       if(executionQuery.getProcessInstanceId()!=null && queryProcessId != executionQuery.getProcessInstanceId()){
         //both business key and process instance id are specified and don't match
         return Collections.emptyList();
@@ -140,7 +141,7 @@ public class SelectExecutionsByQueryCriteria implements SelectListQueryHandler<E
           return null;
         }
         executionIdSet = executionIdSet==null ? new HashSet<String>(queriedExecutionIds) :
-            AbstractIndexHandler.crossCheckIndexes(executionIdSet, new HashSet<String>(queriedExecutionIds));
+            IndexUtils.crossCheckIndexes(executionIdSet, new HashSet<String>(queriedExecutionIds));
       }
       else{
         executionIdSet = getIdsByProcessVariable(session, queryVariableValue, executionIdSet);        
@@ -157,12 +158,12 @@ public class SelectExecutionsByQueryCriteria implements SelectListQueryHandler<E
     ExecutionIdByProcessIdIndex processExecutionsIndex = (ExecutionIdByProcessIdIndex) ExecutionEntityOperations.getIndexHandler(ExecutionIdByProcessIdIndex.class);
     List<String> queriedProcessIds=processIdIndex.getValuesByTypedValue(session, queryVariable.getName(), queryVariable.getTypedValue());
     for(String processId:queriedProcessIds){
-      List<String> queriedExecutionIds = processExecutionsIndex.getValues(session, processId);
+      List<String> queriedExecutionIds = processExecutionsIndex.getValues(null,session, processId);
       if(queriedExecutionIds.isEmpty()){
         return Collections.emptySet();
       }
       executionIdSet = executionIdSet==null ? new HashSet<String>(queriedExecutionIds) :
-        AbstractIndexHandler.crossCheckIndexes(executionIdSet, new HashSet<String>(queriedExecutionIds));
+        IndexUtils.crossCheckIndexes(executionIdSet, new HashSet<String>(queriedExecutionIds));
       if(executionIdSet.isEmpty()){
         return executionIdSet;
       }
@@ -175,12 +176,12 @@ public class SelectExecutionsByQueryCriteria implements SelectListQueryHandler<E
 
     for(EventSubscriptionQueryValue queryEvent : eventSubscriptions){
       if(queryEvent.getEventName()!=null) {
-        List<String> queriedExecutionIds=index.getValues(session, queryEvent.getEventType(), queryEvent.getEventName());
+        List<String> queriedExecutionIds=index.getValues(null,session, queryEvent.getEventType(), queryEvent.getEventName());
         if(queriedExecutionIds.isEmpty()){
           return null;
         }
         executionIdSet = executionIdSet==null ? new HashSet<String>(queriedExecutionIds) :
-          AbstractIndexHandler.crossCheckIndexes(executionIdSet, new HashSet<String>(queriedExecutionIds));
+          IndexUtils.crossCheckIndexes(executionIdSet, new HashSet<String>(queriedExecutionIds));
         if(executionIdSet.isEmpty()){
           return null;
         }

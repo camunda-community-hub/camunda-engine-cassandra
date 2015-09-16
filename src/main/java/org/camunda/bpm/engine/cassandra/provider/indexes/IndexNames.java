@@ -1,3 +1,15 @@
+/* Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.camunda.bpm.engine.cassandra.provider.indexes;
 
 import java.lang.reflect.Field;
@@ -27,6 +39,15 @@ class IndexNames {
   static final String EXECUTION_ID_BY_VARIABLE_VALUE = "var_ex";
   static final String PROCESS_ID_BY_PROCESS_VARIABLE_VALUE = "var_pr";
 
+  //job indexes
+  static final String JOBS_BY_CONFIGURATION = "job_cfg";
+  static final String EXCLUSIVE_JOBS_BY_DUE_DATE = "job_due";
+  static final String EXCLUSIVE_JOBS_BY_LOCK_TIME = "job_lck";
+  static final String JOBS_BY_EXECUTION_ID = "job_ex";
+  
+  //job definition indexes
+  static final String JOB_DEF_ID_BY_PROC_DEF_ID = "jd_pr";
+  
   static {
     //this is just ensuring uniqueness of index names - might be useful if a lot of new indexes are added
     HashSet <String> set = new HashSet <String>();

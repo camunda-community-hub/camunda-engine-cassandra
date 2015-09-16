@@ -6,6 +6,7 @@ import static org.camunda.bpm.engine.cassandra.provider.table.ProcessInstanceTab
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Logger;
 
 import org.camunda.bpm.engine.cassandra.provider.CassandraPersistenceSession;
 import org.camunda.bpm.engine.cassandra.provider.ProcessInstanceBatch;
@@ -20,6 +21,8 @@ import com.datastax.driver.core.UDTValue;
 
 public class ProcessInstanceLoader implements CompositeEntityLoader {
 
+  private final static Logger LOG = Logger.getLogger(ProcessInstanceLoader.class.getName());
+  
   public static final String NAME = "process-instance-compostite";
   public static final String EVENT_SUBSCRIPTIONS = "event_subscriptions";
   public static final String EXECUTIONS = "executions";
@@ -80,6 +83,7 @@ public class ProcessInstanceLoader implements CompositeEntityLoader {
     processInstance.setBusinessKey(businessKey);
 
     ProcessInstanceBatch batch = new ProcessInstanceBatch((ExecutionEntity) loadedProcessInstance.getPrimaryEntity());
+    LOG.fine("Loaded process instance, id="+processInstance.getId()+", version="+processInstance.getRevision());
     session.addLockedBatch(loadedProcessInstance.getPrimaryEntity().getId(), batch);
 
     return loadedProcessInstance;

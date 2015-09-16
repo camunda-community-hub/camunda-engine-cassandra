@@ -13,7 +13,10 @@ import org.camunda.bpm.engine.OptimisticLockingException;
 import org.camunda.bpm.engine.ProcessEngine;
 import org.camunda.bpm.engine.ProcessEngineException;
 import org.camunda.bpm.engine.cassandra.cfg.CassandraProcessEngineConfiguration;
+import org.camunda.bpm.engine.cassandra.provider.indexes.AbstractIndexHandler;
+import org.camunda.bpm.engine.cassandra.provider.indexes.AbstractOrderedIndexHandler;
 import org.camunda.bpm.engine.cassandra.provider.operation.BulkDeleteDeployment;
+import org.camunda.bpm.engine.cassandra.provider.operation.BulkDeleteJobDefinitionsByProcessDefinitionId;
 import org.camunda.bpm.engine.cassandra.provider.operation.BulkDeleteProcessDefinitionByDeploymentId;
 import org.camunda.bpm.engine.cassandra.provider.operation.BulkDeleteResourcesByDeploymentId;
 import org.camunda.bpm.engine.cassandra.provider.operation.BulkOperationHandler;
@@ -22,15 +25,22 @@ import org.camunda.bpm.engine.cassandra.provider.operation.DeploymentOperations;
 import org.camunda.bpm.engine.cassandra.provider.operation.EntityOperationHandler;
 import org.camunda.bpm.engine.cassandra.provider.operation.EventSubscriptionOperations;
 import org.camunda.bpm.engine.cassandra.provider.operation.ExecutionEntityOperations;
+import org.camunda.bpm.engine.cassandra.provider.operation.JobDefinitionOperations;
+import org.camunda.bpm.engine.cassandra.provider.operation.JobOperations;
 import org.camunda.bpm.engine.cassandra.provider.operation.LoadedCompositeEntity;
 import org.camunda.bpm.engine.cassandra.provider.operation.ProcessDefinitionOperations;
 import org.camunda.bpm.engine.cassandra.provider.operation.ProcessInstanceLoader;
 import org.camunda.bpm.engine.cassandra.provider.operation.ResourceOperations;
 import org.camunda.bpm.engine.cassandra.provider.operation.VariableEntityOperations;
 import org.camunda.bpm.engine.cassandra.provider.query.SelectEventSubscriptionsByExecutionAndType;
+import org.camunda.bpm.engine.cassandra.provider.query.SelectExclusiveJobsToExecute;
 import org.camunda.bpm.engine.cassandra.provider.query.SelectExecutionsByQueryCriteria;
+import org.camunda.bpm.engine.cassandra.provider.query.SelectJob;
+import org.camunda.bpm.engine.cassandra.provider.query.SelectJobsByConfiguration;
+import org.camunda.bpm.engine.cassandra.provider.query.SelectJobsByExecutionId;
 import org.camunda.bpm.engine.cassandra.provider.query.SelectLatestProcessDefinitionByKeyQueryHandler;
 import org.camunda.bpm.engine.cassandra.provider.query.SelectListQueryHandler;
+import org.camunda.bpm.engine.cassandra.provider.query.SelectNextJobsToExecute;
 import org.camunda.bpm.engine.cassandra.provider.query.SelectProcessDefinitionsByDeploymentId;
 import org.camunda.bpm.engine.cassandra.provider.query.SelectProcessInstanceByQueryCriteria;
 import org.camunda.bpm.engine.cassandra.provider.query.SingleResultQueryHandler;
@@ -38,11 +48,16 @@ import org.camunda.bpm.engine.cassandra.provider.serializer.CassandraSerializer;
 import org.camunda.bpm.engine.cassandra.provider.serializer.DeploymentEntitySerializer;
 import org.camunda.bpm.engine.cassandra.provider.serializer.EventSubscriptionSerializer;
 import org.camunda.bpm.engine.cassandra.provider.serializer.ExecutionEntitySerializer;
+import org.camunda.bpm.engine.cassandra.provider.serializer.JobDefinitionEntitySerializer;
+import org.camunda.bpm.engine.cassandra.provider.serializer.JobEntitySerializer;
 import org.camunda.bpm.engine.cassandra.provider.serializer.ProcessDefinitionSerializer;
 import org.camunda.bpm.engine.cassandra.provider.serializer.ResourceEntitySerializer;
 import org.camunda.bpm.engine.cassandra.provider.serializer.VariableEntitySerializer;
 import org.camunda.bpm.engine.cassandra.provider.table.DeploymentTableHandler;
 import org.camunda.bpm.engine.cassandra.provider.table.IndexTableHandler;
+import org.camunda.bpm.engine.cassandra.provider.table.JobDefinitionTableHandler;
+import org.camunda.bpm.engine.cassandra.provider.table.JobTableHandler;
+import org.camunda.bpm.engine.cassandra.provider.table.OrderedIndexTableHandler;
 import org.camunda.bpm.engine.cassandra.provider.table.ProcessDefinitionTableHandler;
 import org.camunda.bpm.engine.cassandra.provider.table.ProcessInstanceTableHandler;
 import org.camunda.bpm.engine.cassandra.provider.table.ResourceTableHandler;
@@ -59,9 +74,13 @@ import org.camunda.bpm.engine.impl.db.entitymanager.operation.DbEntityOperation;
 import org.camunda.bpm.engine.impl.persistence.entity.DeploymentEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.EventSubscriptionEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity;
+import org.camunda.bpm.engine.impl.persistence.entity.JobDefinitionEntity;
+import org.camunda.bpm.engine.impl.persistence.entity.JobEntity;
+import org.camunda.bpm.engine.impl.persistence.entity.MessageEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.MessageEventSubscriptionEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.ProcessDefinitionEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.ResourceEntity;
+import org.camunda.bpm.engine.impl.persistence.entity.TimerEntity;
 import org.camunda.bpm.engine.impl.persistence.entity.VariableInstanceEntity;
 
 import com.datastax.driver.core.BatchStatement;
@@ -93,7 +112,6 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   protected Map<String, LockedBatch<?>> lockedBatches = new HashMap<String, LockedBatch<?>>();
   protected Map<String, Map<String, LoadedCompositeEntity>> loadedEntityCache = new HashMap<String, Map<String, LoadedCompositeEntity>>();
 
-
   static {
     serializers.put(EventSubscriptionEntity.class, new EventSubscriptionSerializer());
     serializers.put(ExecutionEntity.class, new ExecutionEntitySerializer());
@@ -101,6 +119,8 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     serializers.put(ResourceEntity.class, new ResourceEntitySerializer());
     serializers.put(DeploymentEntity.class, new DeploymentEntitySerializer());
     serializers.put(VariableInstanceEntity.class, new VariableEntitySerializer());
+    serializers.put(JobEntity.class, new JobEntitySerializer());
+    serializers.put(JobDefinitionEntity.class, new JobDefinitionEntitySerializer());
 
     udtHandlers.put(ExecutionEntity.class, new ExecutionTypeHandler());
     udtHandlers.put(VariableInstanceEntity.class, new VariableTypeHandler());
@@ -111,33 +131,68 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     tableHandlers.add(new DeploymentTableHandler());
     tableHandlers.add(new ProcessInstanceTableHandler());
     tableHandlers.add(new IndexTableHandler());
+    tableHandlers.add(new JobTableHandler());
+    tableHandlers.add(new JobDefinitionTableHandler());
+    tableHandlers.add(new OrderedIndexTableHandler());
     
     compositeEntitiyLoader.put(ProcessInstanceLoader.NAME, new ProcessInstanceLoader());
     
     singleResultQueryHandlers.put("selectLatestProcessDefinitionByKey", new SelectLatestProcessDefinitionByKeyQueryHandler());   
+    singleResultQueryHandlers.put("selectJob", new SelectJob());   
     
     listResultQueryHandlers.put("selectExecutionsByQueryCriteria", new SelectExecutionsByQueryCriteria());
     listResultQueryHandlers.put("selectProcessInstanceByQueryCriteria", new SelectProcessInstanceByQueryCriteria());
     listResultQueryHandlers.put("selectEventSubscriptionsByExecutionAndType", new SelectEventSubscriptionsByExecutionAndType());
     listResultQueryHandlers.put("selectProcessDefinitionByDeploymentId", new SelectProcessDefinitionsByDeploymentId());
-
+    listResultQueryHandlers.put("selectNextJobsToExecute", new SelectNextJobsToExecute());
+    listResultQueryHandlers.put("selectJobsByConfiguration", new SelectJobsByConfiguration());
+    listResultQueryHandlers.put("selectExclusiveJobsToExecute", new SelectExclusiveJobsToExecute());
+    listResultQueryHandlers.put("selectJobsByExecutionId", new SelectJobsByExecutionId());
+            
     bulkOperationHandlers.put("deleteDeployment", new BulkDeleteDeployment());
     bulkOperationHandlers.put("deleteResourcesByDeploymentId", new BulkDeleteResourcesByDeploymentId());
     bulkOperationHandlers.put("deleteProcessDefinitionsByDeploymentId", new BulkDeleteProcessDefinitionByDeploymentId());
-
+    bulkOperationHandlers.put("deleteJobDefinitionsByProcessDefinitionId", new BulkDeleteJobDefinitionsByProcessDefinitionId());
+    
   }
 
   protected boolean processInstanceVersionIncremented = false;
+  
+  /**
+   * This method is called after the session is initialized, but before the engine finished initializing.
+   * so it can be used for any initialization that requires cassandra session, 
+   * but it should not use any camunda functionality
+   * 
+   * @param config
+   */
+  public static void staticInit(CassandraProcessEngineConfiguration config) {
+    //TODO- add everything that needs to prepare statements
+    EventSubscriptionOperations.prepare(config);
+    ProcessDefinitionOperations.prepare(config);
+    ResourceOperations.prepare(config);
+    DeploymentOperations.prepare(config);
+    ExecutionEntityOperations.prepare(config);
+    VariableEntityOperations.prepare(config);
+    JobOperations.prepare(config);
+    JobDefinitionOperations.prepare(config);
+    SelectNextJobsToExecute.prepare(config);  
+    AbstractIndexHandler.prepare(config);
+    AbstractOrderedIndexHandler.prepare(config);
+  }
 
   public CassandraPersistenceSession(com.datastax.driver.core.Session session) {
     this.cassandraSession = session;
-    //might be useful to keep context in operation for the duration of a single transaction
-    operations.put(MessageEventSubscriptionEntity.class, new EventSubscriptionOperations());
-    operations.put(ProcessDefinitionEntity.class, new ProcessDefinitionOperations());
-    operations.put(ResourceEntity.class, new ResourceOperations());
-    operations.put(DeploymentEntity.class, new DeploymentOperations());
-    operations.put(ExecutionEntity.class, new ExecutionEntityOperations());
-    operations.put(VariableInstanceEntity.class, new VariableEntityOperations());
+    //it is useful to keep context in operation for the duration of a single transaction, so not static
+    operations.put(MessageEventSubscriptionEntity.class, new EventSubscriptionOperations(this));
+    operations.put(ProcessDefinitionEntity.class, new ProcessDefinitionOperations(this));
+    operations.put(ResourceEntity.class, new ResourceOperations(this));
+    operations.put(DeploymentEntity.class, new DeploymentOperations(this));
+    operations.put(ExecutionEntity.class, new ExecutionEntityOperations(this));
+    operations.put(VariableInstanceEntity.class, new VariableEntityOperations(this));
+    operations.put(JobEntity.class, new JobOperations(this));
+    operations.put(MessageEntity.class, new JobOperations(this));
+    operations.put(TimerEntity.class, new JobOperations(this));
+    operations.put(JobDefinitionEntity.class, new JobDefinitionOperations(this));
 
   }
 
@@ -195,8 +250,6 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   }
 
   protected void processLoadedComposite(LoadedCompositeEntity composite) {
-    ((VariableEntityOperations)operations.get(VariableInstanceEntity.class)).onCompositeLoad(composite);
-
     DbEntity mainEntity = composite.getPrimaryEntity();
     boolean isMainEntityEventFired = false;
     for (Map<String, ? extends DbEntity> entities : composite.getEmbeddedEntities().values()) {
@@ -234,7 +287,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   }
 
   public void lock(String statement, Object parameter) {
-
+      LOG.warning("Lock called on statement: "+statement);
   }
 
   public void commit() {
@@ -243,10 +296,14 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     long timestamp = ((CassandraProcessEngineConfiguration)Context.getProcessEngineConfiguration())
         .getCluster().getConfiguration().getPolicies().getTimestampGenerator().next();
     for (LockedBatch<?> batchWithLocking : lockedBatches.values()) {
-      flushBatch(batchWithLocking.getBatch(), timestamp);
-      flushBatch(batchWithLocking.getIndexBatch(), timestamp);
+      if(!batchWithLocking.isEmpty()){
+        flushBatch(batchWithLocking.getBatch(), timestamp);
+        flushBatch(batchWithLocking.getIndexBatch(), timestamp);
+      }
     }
-    flushBatch(varietyBatch, timestamp);
+    if(!varietyBatch.getStatements().isEmpty()){
+      flushBatch(varietyBatch, timestamp);
+    }
   }
 
   private void flushBatch(BatchStatement batch, long timestamp) {
@@ -257,6 +314,9 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     List<Row> rows = cassandraSession.execute(batch).all();
     for (Row row : rows) {
       if(!row.getBool("[applied]")) {
+        LockedBatch lb = lockedBatches.values().iterator().next();
+        
+        LOG.log(Level.FINE, "flushBatch optimistic locking exception, version: "+ lb.getVersion());
         throw new OptimisticLockingException("Process instance was updated by another transaction concurrently.");
       }
     }
@@ -421,8 +481,13 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   }
 
   @SuppressWarnings("unchecked")
-  public <T extends DbEntity> CassandraSerializer<T> getSerializer(Class<T> type) {
+  public static <T extends DbEntity> CassandraSerializer<T> getSerializer(Class<T> type) {
     return (CassandraSerializer<T>) serializers.get(type);
+  }
+
+  @SuppressWarnings("unchecked")
+  public <T extends DbEntity> EntityOperationHandler<T> getOperationsHandler(Class<T> type) {
+    return (EntityOperationHandler<T>) operations.get(type);
   }
 
   public Session getSession() {

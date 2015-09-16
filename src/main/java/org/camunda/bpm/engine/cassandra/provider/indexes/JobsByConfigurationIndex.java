@@ -10,20 +10,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.camunda.bpm.engine.cassandra.provider.indexes;
 
-import org.camunda.bpm.engine.impl.persistence.entity.EventSubscriptionEntity;
+import org.camunda.bpm.engine.impl.persistence.entity.JobEntity;
 
 /**
  * @author Natalia Levine
  *
- * @created 12/07/2015
+ * @created 16/09/2015
  */
-public class ExecutionIdByEventTypeAndNameIndex extends AbstractIndexHandler<EventSubscriptionEntity> {
+public class JobsByConfigurationIndex extends AbstractIndexHandler<JobEntity> {
 
   @Override
   protected String getIndexName() {
-     return IndexNames.EXECUTION_ID_BY_EVENT_NAME;
+     return IndexNames.JOBS_BY_CONFIGURATION;
   }
 
   @Override
@@ -34,20 +35,22 @@ public class ExecutionIdByEventTypeAndNameIndex extends AbstractIndexHandler<Eve
   @Override
   protected String getIndexValue(String... indexValues) {
     if(indexValues.length!=2){
-      throw new IllegalArgumentException("ExecutionIdByEventTypeAndNameIndex requires event type and event name");
+      throw new IllegalArgumentException("JobsByConfigurationIndex requires handler type and handler configuration");
     }
     
     return IndexUtils.createIndexValue(indexValues);
   }
 
   @Override
-  protected String getIndexValue(EventSubscriptionEntity entity) {
-    return IndexUtils.createIndexValue(entity.getEventType(), entity.getEventName());
+  protected String getIndexValue(JobEntity entity) {
+    return IndexUtils.createIndexValue(entity.getJobHandlerType(), entity.getJobHandlerConfiguration());
   }
 
   @Override
-  protected String getValue(EventSubscriptionEntity entity) {
-    return entity.getExecutionId();
+  protected String getValue(JobEntity entity) {
+    //JobEntityKey key = new JobEntityKey(entity);
+    //return key.toJsonString();
+    return entity.getId();
   }
 
 }

@@ -105,7 +105,7 @@ public class ExecutionEntityOperations implements EntityOperationHandler<Executi
 
   @Override
   public ExecutionEntity getEntityById(CassandraPersistenceSession session, String id) {    
-    String procId = indexHandlers.get(ProcessIdByExecutionIdIndex.class).getUniqueValue(session, id);
+    String procId = indexHandlers.get(ProcessIdByExecutionIdIndex.class).getUniqueValue(null,session, id);
     if(procId==null){
       return null;
     }
