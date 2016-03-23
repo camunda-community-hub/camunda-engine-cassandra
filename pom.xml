@@ -1,9 +1,8 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.camunda.bpm.ext</groupId>
   <artifactId>camunda-engine-cassandra</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>0.1.0</version>
   <name>Cassandra Persistence Provider for Camunda Engine</name>
 
   <parent>
@@ -157,7 +156,7 @@
     <connection>scm:git:git@github.com:camunda/camunda-engine-cassandra.git</connection>
     <url>scm:git:git@github.com:camunda/camunda-engine-cassandra.git</url>
     <developerConnection>scm:git:git@github.com:camunda/camunda-engine-cassandra.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>0.1.0</tag>
   </scm>
 
   <!-- repositories used for distribution of releases and snapshots, DO NOT CHANGE -->
