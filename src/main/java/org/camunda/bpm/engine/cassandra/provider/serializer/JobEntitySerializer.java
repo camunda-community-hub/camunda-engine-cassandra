@@ -1,9 +1,9 @@
 /* Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -54,7 +54,7 @@ public class JobEntitySerializer implements CassandraSerializer<JobEntity> {
     data.setInt("suspension_state", entity.getSuspensionState());
     data.setString("job_def_id", entity.getJobDefinitionId());
     data.setLong("sequence_counter", entity.getSequenceCounter());
-    data.setInt("priority", entity.getPriority());
+    data.setLong("priority", entity.getPriority());
     data.setInt("revision", entity.getRevision());
   }
 
@@ -81,7 +81,7 @@ public class JobEntitySerializer implements CassandraSerializer<JobEntity> {
     entity.setProcessDefinitionId(data.getString("process_def_id"));
     entity.setProcessDefinitionKey(data.getString("process_def_key"));
     entity.setRetries(data.getInt("retries"));
-    //TODO - JobEntity does not allow to set the exception stack trace ID 
+    //TODO - JobEntity does not allow to set the exception stack trace ID
     //entity.setExceptionByteArrayId(data.getString("exception_stack_id"));
     entity.setExceptionMessage(data.getString("exception_message"));
     if(entity instanceof TimerEntity){
@@ -93,7 +93,7 @@ public class JobEntitySerializer implements CassandraSerializer<JobEntity> {
     entity.setSuspensionState(data.getInt("suspension_state"));
     entity.setJobDefinitionId(data.getString("job_def_id"));
     entity.setSequenceCounter(data.getLong("sequence_counter"));
-    entity.setPriority(data.getInt("priority"));
+    entity.setPriority(data.getLong("priority"));
     entity.setRevision(data.getInt("revision"));
     return entity;
   }
@@ -121,7 +121,7 @@ public class JobEntitySerializer implements CassandraSerializer<JobEntity> {
     entity.setProcessDefinitionId(data.getProcessDefinitionId());
     entity.setProcessDefinitionKey(data.getProcessDefinitionKey());
     entity.setRetries(data.getRetries());
-    //TODO - JobEntity does not allow to set the exception stack trace ID 
+    //TODO - JobEntity does not allow to set the exception stack trace ID
     //entity.setExceptionByteArrayId(data.getExceptionByteArrayId());
     entity.setExceptionMessage(data.getExceptionMessage());
     if(entity instanceof TimerEntity){

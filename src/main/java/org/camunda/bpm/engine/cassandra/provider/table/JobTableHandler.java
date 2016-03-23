@@ -1,9 +1,9 @@
 /* Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,7 +23,7 @@ import com.datastax.driver.core.Session;
  * @created 15/09/2015
  */
 public class JobTableHandler implements TableHandler {
-  
+
   public final static String TABLE_NAME = "cam_job";
   public final static String JOB_INDEX_TABLE = "cam_job_idx";
 
@@ -48,10 +48,10 @@ public class JobTableHandler implements TableHandler {
 	      + "suspension_state int, "
 	      + "job_def_id text, "
 	      + "sequence_counter bigint, "
-        + "priority int, "
+        + "priority bigint, "
 	      + "revision int, "
 	      + "PRIMARY KEY (id) ); ";
-  
+
   protected final static String CREATE_INDEX = "CREATE TABLE IF NOT EXISTS "+JOB_INDEX_TABLE +" ("
       + "shard_id timestamp, "
       + "is_locked boolean, "
@@ -62,7 +62,7 @@ public class JobTableHandler implements TableHandler {
 
   protected final static String DROP_TABLE = "DROP TABLE IF EXISTS "+TABLE_NAME;
   protected final static String DROP_INDEX = "DROP TABLE IF EXISTS "+JOB_INDEX_TABLE;
-  
+
   public List<String> getTableNames() {
     return Arrays.asList(TABLE_NAME,JOB_INDEX_TABLE);
   }
@@ -71,7 +71,7 @@ public class JobTableHandler implements TableHandler {
     s.execute(CREATE_TABLE);
     s.execute(CREATE_INDEX);
   }
-  
+
   public void dropTable(Session s) {
     s.execute(DROP_TABLE);
     s.execute(DROP_INDEX);

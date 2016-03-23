@@ -39,6 +39,7 @@ import org.camunda.bpm.engine.cassandra.provider.query.SelectJob;
 import org.camunda.bpm.engine.cassandra.provider.query.SelectJobsByConfiguration;
 import org.camunda.bpm.engine.cassandra.provider.query.SelectJobsByExecutionId;
 import org.camunda.bpm.engine.cassandra.provider.query.SelectLatestProcessDefinitionByKeyQueryHandler;
+import org.camunda.bpm.engine.cassandra.provider.query.SelectLatestProcessDefinitionByKeyWithoutTenantIdQueryHandler;
 import org.camunda.bpm.engine.cassandra.provider.query.SelectListQueryHandler;
 import org.camunda.bpm.engine.cassandra.provider.query.SelectNextJobsToExecute;
 import org.camunda.bpm.engine.cassandra.provider.query.SelectProcessDefinitionsByDeploymentId;
@@ -105,7 +106,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
   protected static Map<String, SingleResultQueryHandler<?>> singleResultQueryHandlers = new HashMap<String, SingleResultQueryHandler<?>>();
   protected static Map<String, SelectListQueryHandler<?, ?>> listResultQueryHandlers = new HashMap<String, SelectListQueryHandler<?,?>>();
   protected static Map<String, BulkOperationHandler> bulkOperationHandlers = new HashMap<String, BulkOperationHandler>();
-  
+
   protected Map<Class<?>, EntityOperationHandler<?>> operations = new HashMap<Class<?>, EntityOperationHandler<?>>();
 
   protected BatchStatement varietyBatch = new BatchStatement();
@@ -134,12 +135,12 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     tableHandlers.add(new JobTableHandler());
     tableHandlers.add(new JobDefinitionTableHandler());
     tableHandlers.add(new OrderedIndexTableHandler());
-    
+
     compositeEntitiyLoader.put(ProcessInstanceLoader.NAME, new ProcessInstanceLoader());
-    
-    singleResultQueryHandlers.put("selectLatestProcessDefinitionByKey", new SelectLatestProcessDefinitionByKeyQueryHandler());   
-    singleResultQueryHandlers.put("selectJob", new SelectJob());   
-    
+
+    singleResultQueryHandlers.put("selectLatestProcessDefinitionByKeyWithoutTenantId", new SelectLatestProcessDefinitionByKeyWithoutTenantIdQueryHandler());
+    singleResultQueryHandlers.put("selectJob", new SelectJob());
+
     listResultQueryHandlers.put("selectExecutionsByQueryCriteria", new SelectExecutionsByQueryCriteria());
     listResultQueryHandlers.put("selectProcessInstanceByQueryCriteria", new SelectProcessInstanceByQueryCriteria());
     listResultQueryHandlers.put("selectEventSubscriptionsByExecutionAndType", new SelectEventSubscriptionsByExecutionAndType());
@@ -148,21 +149,22 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     listResultQueryHandlers.put("selectJobsByConfiguration", new SelectJobsByConfiguration());
     listResultQueryHandlers.put("selectExclusiveJobsToExecute", new SelectExclusiveJobsToExecute());
     listResultQueryHandlers.put("selectJobsByExecutionId", new SelectJobsByExecutionId());
-            
+    listResultQueryHandlers.put("selectLatestProcessDefinitionByKey", new SelectLatestProcessDefinitionByKeyQueryHandler());
+
     bulkOperationHandlers.put("deleteDeployment", new BulkDeleteDeployment());
     bulkOperationHandlers.put("deleteResourcesByDeploymentId", new BulkDeleteResourcesByDeploymentId());
     bulkOperationHandlers.put("deleteProcessDefinitionsByDeploymentId", new BulkDeleteProcessDefinitionByDeploymentId());
     bulkOperationHandlers.put("deleteJobDefinitionsByProcessDefinitionId", new BulkDeleteJobDefinitionsByProcessDefinitionId());
-    
+
   }
 
   protected boolean processInstanceVersionIncremented = false;
-  
+
   /**
    * This method is called after the session is initialized, but before the engine finished initializing.
-   * so it can be used for any initialization that requires cassandra session, 
+   * so it can be used for any initialization that requires cassandra session,
    * but it should not use any camunda functionality
-   * 
+   *
    * @param config
    */
   public static void staticInit(CassandraProcessEngineConfiguration config) {
@@ -175,7 +177,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     VariableEntityOperations.prepare(config);
     JobOperations.prepare(config);
     JobDefinitionOperations.prepare(config);
-    SelectNextJobsToExecute.prepare(config);  
+    SelectNextJobsToExecute.prepare(config);
     AbstractIndexHandler.prepare(config);
     AbstractOrderedIndexHandler.prepare(config);
   }
@@ -315,7 +317,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     for (Row row : rows) {
       if(!row.getBool("[applied]")) {
         LockedBatch lb = lockedBatches.values().iterator().next();
-        
+
         LOG.log(Level.FINE, "flushBatch optimistic locking exception, version: "+ lb.getVersion());
         throw new OptimisticLockingException("Process instance was updated by another transaction concurrently.");
       }
@@ -338,6 +340,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
 
   }
 
+  @Override
   @SuppressWarnings({ "rawtypes", "unchecked" })
   protected void insertEntity(DbEntityOperation operation) {
     LOG.log(Level.FINE, "insertEntity, operation: "+operation.toString());
@@ -351,6 +354,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
 
   }
 
+  @Override
   @SuppressWarnings({ "rawtypes", "unchecked" })
   protected void deleteEntity(DbEntityOperation operation) {
     LOG.log(Level.FINE, "deleteEntity, operation: "+operation.toString());
@@ -363,6 +367,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     }
   }
 
+  @Override
   protected void deleteBulk(DbBulkOperation operation) {
     LOG.log(Level.FINE, "deleteBulk, operation: "+operation.toString());
     BulkOperationHandler handler = bulkOperationHandlers.get(operation.getStatement());
@@ -374,6 +379,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     }
   }
 
+  @Override
   @SuppressWarnings({ "rawtypes", "unchecked" })
   protected void updateEntity(DbEntityOperation operation) {
     LOG.log(Level.FINE, "updateEntity, operation: "+operation.toString());
@@ -386,6 +392,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     }
   }
 
+  @Override
   protected void updateBulk(DbBulkOperation operation) {
     LOG.log(Level.WARNING, "unhandled BULK update '"+operation+"'");
   }
@@ -393,19 +400,23 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
 
   /// Schema mngt ///////////////////////////////////7
 
+  @Override
   protected String getDbVersion() {
     return ProcessEngine.VERSION;
   }
 
+  @Override
   protected void dbSchemaCreateIdentity() {
 
   }
 
+  @Override
   protected void dbSchemaCreateHistory() {
 
   }
 
 
+  @Override
   protected void dbSchemaCreateEngine() {
     Collection<UDTypeHandler> typeHandlers_ = udtHandlers.values();
     for (UDTypeHandler typeHandler : typeHandlers_) {
@@ -417,22 +428,27 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     }
   }
 
+  @Override
   protected void dbSchemaCreateCmmn() {
 
   }
 
+  @Override
   protected void dbSchemaCreateCmmnHistory() {
 
   }
 
+  @Override
   protected void dbSchemaDropIdentity() {
 
   }
 
+  @Override
   protected void dbSchemaDropHistory() {
 
   }
 
+  @Override
   protected void dbSchemaDropEngine() {
     for (TableHandler tableHandler : tableHandlers) {
       tableHandler.dropTable(cassandraSession);
@@ -444,14 +460,17 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     }
   }
 
+  @Override
   protected void dbSchemaDropCmmn() {
 
   }
 
+  @Override
   protected void dbSchemaDropCmmnHistory() {
 
   }
 
+  @Override
   public boolean isEngineTablePresent() {
     KeyspaceMetadata keyspaceMetaData = cassandraSession.getCluster()
       .getMetadata()
@@ -460,18 +479,22 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     return keyspaceMetaData.getTable(ProcessDefinitionTableHandler.TABLE_NAME) != null;
   }
 
+  @Override
   public boolean isHistoryTablePresent() {
     return false;
   }
 
+  @Override
   public boolean isIdentityTablePresent() {
     return false;
   }
 
+  @Override
   public boolean isCmmnTablePresent() {
     return false;
   }
 
+  @Override
   public boolean isCmmnHistoryTablePresent() {
     return false;
   }
@@ -494,6 +517,7 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     return cassandraSession;
   }
 
+  @Override
   public List<String> getTableNamesPresent() {
     List<String> tableNames = new ArrayList<String>();
     for (TableHandler tableHandler : tableHandlers) {
@@ -534,30 +558,33 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     varietyBatch.add(statement);
   }
 
-  /* (non-Javadoc)
-   * @see org.camunda.bpm.engine.impl.db.AbstractPersistenceSession#dbSchemaCreateDmn()
-   */
   @Override
   protected void dbSchemaCreateDmn() {
-    // TODO Auto-generated method stub
-    
+    // not supported
   }
 
-  /* (non-Javadoc)
-   * @see org.camunda.bpm.engine.impl.db.AbstractPersistenceSession#dbSchemaDropDmn()
-   */
   @Override
   protected void dbSchemaDropDmn() {
-    // TODO Auto-generated method stub
-    
+    // not supported
   }
 
-  /* (non-Javadoc)
-   * @see org.camunda.bpm.engine.impl.db.AbstractPersistenceSession#isDmnTablePresent()
-   */
   @Override
   public boolean isDmnTablePresent() {
-    // TODO Auto-generated method stub
+    return false;
+  }
+
+  @Override
+  protected void dbSchemaCreateDmnHistory() {
+    // not supported
+  }
+
+  @Override
+  protected void dbSchemaDropDmnHistory() {
+    // not supported
+  }
+
+  @Override
+  public boolean isDmnHistoryTablePresent() {
     return false;
   }
 }
