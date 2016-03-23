@@ -15,6 +15,7 @@
   <properties>
     <jackson.version>2.4.4</jackson.version>
     <version.junit>4.11</version.junit>
+    <camunda.version>7.5.0-alpha2</camunda.version>
   </properties>
 
   <dependencyManagement>
@@ -22,7 +23,7 @@
       <dependency>
         <groupId>org.camunda.bpm</groupId>
         <artifactId>camunda-bom</artifactId>
-        <version>7.5.0-alpha2</version>
+        <version>${camunda.version}</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -35,13 +36,13 @@
   </dependencyManagement>
 
   <dependencies>
-    
+
     <dependency>
       <groupId>org.camunda.bpm</groupId>
       <artifactId>camunda-engine</artifactId>
     </dependency>
-    
-<!-- 
+
+<!--
     <dependency>
       <groupId>org.cassandraunit</groupId>
       <artifactId>cassandra-unit</artifactId>
@@ -62,14 +63,14 @@
       <version>${version.junit}</version>
       <scope>test</scope>
     </dependency>
-   
+
     <dependency>
       <groupId>com.fasterxml.uuid</groupId>
       <artifactId>java-uuid-generator</artifactId>
     </dependency>
-    
+
   </dependencies>
-  
+
   <build>
     <testResources>
       <testResource>
@@ -115,7 +116,7 @@
                     <artifactItem>
                       <groupId>org.camunda.bpm</groupId>
                       <artifactId>camunda-engine</artifactId>
-                      <version>7.4.0-SNAPSHOT</version>
+                      <version>${camunda.version}</version>
                       <type>test-jar</type>
                       <outputDirectory>${project.build.directory}/test-classes</outputDirectory>
                       <excludes>**/camunda.cfg.xml</excludes>
@@ -144,5 +145,35 @@
       </build>
     </profile>
   </profiles>
+
+  <licenses>
+    <license>
+      <name>The Apache Software License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+    </license>
+  </licenses>
+
+  <scm>
+    <connection>scm:git:git@github.com:camunda/camunda-engine-cassandra.git</connection>
+    <url>scm:git:git@github.com:camunda/camunda-engine-cassandra.git</url>
+    <developerConnection>scm:git:git@github.com:camunda/camunda-engine-cassandra.git</developerConnection>
+    <tag>HEAD</tag>
+  </scm>
+
+  <!-- repositories used for distribution of releases and snapshots, DO NOT CHANGE -->
+  <distributionManagement>
+    <repository>
+      <id>camunda-nexus</id>
+      <name>camunda bpm community extensions</name>
+      <url>https://app.camunda.com/nexus/content/repositories/camunda-bpm-community-extensions</url>
+    </repository>
+    <snapshotRepository>
+      <id>camunda-nexus</id>
+      <name>camunda bpm community extensions snapshots</name>
+      <url>https://app.camunda.com/nexus/content/repositories/camunda-bpm-community-extensions-snapshots</url>
+      <!-- for maven 2 compatibility -->
+      <uniqueVersion>true</uniqueVersion>
+    </snapshotRepository>
+  </distributionManagement>
 
 </project>
