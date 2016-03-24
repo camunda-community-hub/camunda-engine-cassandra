@@ -42,8 +42,10 @@ import org.camunda.bpm.engine.cassandra.provider.query.SelectLatestProcessDefini
 import org.camunda.bpm.engine.cassandra.provider.query.SelectLatestProcessDefinitionByKeyWithoutTenantIdQueryHandler;
 import org.camunda.bpm.engine.cassandra.provider.query.SelectListQueryHandler;
 import org.camunda.bpm.engine.cassandra.provider.query.SelectNextJobsToExecute;
+import org.camunda.bpm.engine.cassandra.provider.query.SelectProcessDefinitionByDeploymentAndKey;
 import org.camunda.bpm.engine.cassandra.provider.query.SelectProcessDefinitionsByDeploymentId;
 import org.camunda.bpm.engine.cassandra.provider.query.SelectProcessInstanceByQueryCriteria;
+import org.camunda.bpm.engine.cassandra.provider.query.SelectResourcesByDeploymentId;
 import org.camunda.bpm.engine.cassandra.provider.query.SingleResultQueryHandler;
 import org.camunda.bpm.engine.cassandra.provider.serializer.CassandraSerializer;
 import org.camunda.bpm.engine.cassandra.provider.serializer.DeploymentEntitySerializer;
@@ -139,12 +141,14 @@ public class CassandraPersistenceSession extends AbstractPersistenceSession {
     compositeEntitiyLoader.put(ProcessInstanceLoader.NAME, new ProcessInstanceLoader());
 
     singleResultQueryHandlers.put("selectLatestProcessDefinitionByKeyWithoutTenantId", new SelectLatestProcessDefinitionByKeyWithoutTenantIdQueryHandler());
+    singleResultQueryHandlers.put("selectProcessDefinitionByDeploymentAndKey", new SelectProcessDefinitionByDeploymentAndKey());
     singleResultQueryHandlers.put("selectJob", new SelectJob());
 
     listResultQueryHandlers.put("selectExecutionsByQueryCriteria", new SelectExecutionsByQueryCriteria());
     listResultQueryHandlers.put("selectProcessInstanceByQueryCriteria", new SelectProcessInstanceByQueryCriteria());
     listResultQueryHandlers.put("selectEventSubscriptionsByExecutionAndType", new SelectEventSubscriptionsByExecutionAndType());
     listResultQueryHandlers.put("selectProcessDefinitionByDeploymentId", new SelectProcessDefinitionsByDeploymentId());
+    listResultQueryHandlers.put("selectResourcesByDeploymentId", new SelectResourcesByDeploymentId());
     listResultQueryHandlers.put("selectNextJobsToExecute", new SelectNextJobsToExecute());
     listResultQueryHandlers.put("selectJobsByConfiguration", new SelectJobsByConfiguration());
     listResultQueryHandlers.put("selectExclusiveJobsToExecute", new SelectExclusiveJobsToExecute());

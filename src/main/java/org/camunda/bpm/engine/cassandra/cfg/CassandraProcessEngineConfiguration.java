@@ -19,21 +19,23 @@ public class CassandraProcessEngineConfiguration extends StandaloneProcessEngine
   protected Session session;
   protected String keyspace;
   protected int jobShardSizeHours=1; //size of the job shard
-  protected int jobShardInitNumber=10; //how far to go back to find active shards on start-up 
-  //protected int maxPriority=5; //maximum priority 
+  protected int jobShardInitNumber=10; //how far to go back to find active shards on start-up
+  //protected int maxPriority=5; //maximum priority
   protected int replicationFactor = 1;
+
+  protected boolean hasOpenedCluster = false;
 
   @Override
   protected void init() {
     initCassandraClient();
     super.init();
   }
-  
+
   @Override
   protected void initPersistenceProviders() {
     addSessionFactory(new CassandraPersistenceSessionFactory(session));
   }
-  
+
   protected void initCassandraClient() {
     if(keyspace == null) {
       keyspace = DEFAULT_KEYSPACE;
@@ -44,45 +46,61 @@ public class CassandraProcessEngineConfiguration extends StandaloneProcessEngine
         .addContactPoint(cassandraContactPoint)
         .withTimestampGenerator(new AtomicMonotonicTimestampGenerator())
         .build();
-      
-      // make sure the keyspace exists (create it with default replication settings otherwise)
-      KeyspaceMetadata existingKeyspace = cluster.getMetadata().getKeyspace("camunda");
-      if(existingKeyspace == null) {
-        Session session = cluster.connect();
-        session.execute(String.format("CREATE keyspace %s WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : " + replicationFactor + " };", keyspace));
-        session.close();
-      }
-      
+      hasOpenedCluster = true;
+    }
+
+    // make sure the keyspace exists (create it with default replication settings otherwise)
+    KeyspaceMetadata existingKeyspace = cluster.getMetadata().getKeyspace("camunda");
+    if(existingKeyspace == null) {
+      final Session session = cluster.connect();
+      session.execute(String.format("CREATE keyspace %s WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : " + replicationFactor + " };", keyspace));
+      session.close();
+    }
+
+    if(session == null) {
       session = cluster.connect(keyspace);
-      
     }
   }
 
+  @Override
   public ProcessEngine buildProcessEngine() {
     super.buildProcessEngine();
-    CassandraPersistenceSession.staticInit(this); 
+    CassandraPersistenceSession.staticInit(this);
     return processEngine;
   }
- 
+
+  @Override
+  public void close()
+  {
+    super.close();
+    if(hasOpenedCluster) {
+      cluster.close();
+    }
+  }
+
+  @Override
   protected void initIdGenerator() {
     if(idGenerator == null) {
       idGenerator = new StrongUuidGenerator();
     }
   }
-  
+
+  @Override
   protected void initSqlSessionFactory() {
   }
-  
+
+  @Override
   protected void initDataSource() {
   }
-  
+
+  @Override
   protected void initJpa() {
   }
-  
+
   public void setCluster(Cluster cluster) {
     this.cluster = cluster;
   }
-  
+
   public Cluster getCluster() {
     return cluster;
   }
@@ -112,12 +130,12 @@ public class CassandraProcessEngineConfiguration extends StandaloneProcessEngine
     this.keyspace = keyspace;
     return this;
   }
-  
+
   public CassandraProcessEngineConfiguration setReplicationFactor(int replicationFactor) {
     this.replicationFactor = replicationFactor;
     return this;
   }
-  
+
   public int getReplicationFactor() {
     return replicationFactor;
   }
