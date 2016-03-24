@@ -2,6 +2,8 @@
 
 Cassandra Persistence for Camunda (Community Extension)
 
+Example Project: https://github.com/meyerdan/camunda-cassandra-example
+
 ## Key design aspects
 
 Camunda utilises database persistence for its core engine functionality in a very specific pattern:
