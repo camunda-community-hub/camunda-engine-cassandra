@@ -13,7 +13,7 @@
 
   <properties>
     <jackson.version>2.4.4</jackson.version>
-    <version.junit>4.11</version.junit>
+    <version.junit>4.13.1</version.junit>
     <camunda.version>7.5.0-alpha2</camunda.version>
   </properties>
 
