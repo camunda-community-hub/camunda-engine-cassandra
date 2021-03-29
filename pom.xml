@@ -12,7 +12,7 @@
   </parent>
 
   <properties>
-    <jackson.version>2.4.4</jackson.version>
+    <jackson.version>2.9.10.7</jackson.version>
     <version.junit>4.11</version.junit>
     <camunda.version>7.5.0-alpha2</camunda.version>
     <additionalparam>-Xdoclint:none</additionalparam>
